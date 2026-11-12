@@ -1,1 +1,1 @@
-"""Standard Chinese Sign Language recognition integration boundary."""
+"""American Sign Language recognition and WLASL label mapping."""

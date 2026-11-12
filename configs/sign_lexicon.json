@@ -1,8 +1,10 @@
 {
-  "language": "国家通用手语",
-  "reference": "https://www.moe.gov.cn/jyb_xwfb/s271/201805/t20180521_336624.html",
+  "language": "American Sign Language (ASL)",
+  "dataset": "WLASL v0.3",
+  "reference": "https://github.com/dxli94/WLASL",
+  "source_commit": "ac00e6be631c1a2a486621b65f202219f3964d6b",
   "entries": [
-    {"sign_id": "water_request_candidate", "concept": "与水有关的取物表达", "intent": "request_water", "verification_status": "pending", "source_locator": null, "reference_video": null, "reviewed_by": null},
-    {"sign_id": "tissue_request_candidate", "concept": "与纸巾有关的取物表达", "intent": "request_tissue", "verification_status": "pending", "source_locator": null, "reference_video": null, "reviewed_by": null}
+    {"sign_id": "wlasl:water", "gloss": "water", "intent": "request_water", "metadata_verified": true, "annotated_samples": 18, "recognition_status": "model_integration_pending"},
+    {"sign_id": "wlasl:tissue", "gloss": "tissue", "intent": "request_tissue", "metadata_verified": true, "annotated_samples": 8, "recognition_status": "model_integration_pending"}
   ]
 }

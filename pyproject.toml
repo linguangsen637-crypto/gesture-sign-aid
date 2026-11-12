@@ -5,10 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "gesture-sign-aid"
 version = "0.1.0"
-description = "Standard Chinese Sign Language requests for SO-101 assisted item retrieval"
+description = "WLASL American Sign Language requests for SO-101 assisted item retrieval"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = []
+
+[project.optional-dependencies]
+wlasl = ["requests>=2.32,<3", "yt-dlp>=2025.1.26", "opencv-python-headless>=4.10,<5"]
 
 [project.scripts]
 signaid = "gesture_aid.cli:main"

@@ -1,0 +1,3 @@
+[submodule "third_party/WLASL"]
+	path = third_party/WLASL
+	url = https://github.com/dxli94/WLASL.git

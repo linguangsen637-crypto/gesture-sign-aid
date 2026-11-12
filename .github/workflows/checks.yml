@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -18,3 +20,9 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m gesture_aid.cli demo --intent request_water --confirm --delivered
+      - name: Verify WLASL metadata and mapping
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m gesture_aid.cli wlasl stats --gloss water tissue
+          python -m gesture_aid.cli demo --gloss water --confirm --delivered
