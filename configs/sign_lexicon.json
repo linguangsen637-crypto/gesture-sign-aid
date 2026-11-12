@@ -1,0 +1,8 @@
+{
+  "language": "国家通用手语",
+  "reference": "https://www.moe.gov.cn/jyb_xwfb/s271/201805/t20180521_336624.html",
+  "entries": [
+    {"sign_id": "water_request_candidate", "concept": "与水有关的取物表达", "intent": "request_water", "verification_status": "pending", "source_locator": null, "reference_video": null, "reviewed_by": null},
+    {"sign_id": "tissue_request_candidate", "concept": "与纸巾有关的取物表达", "intent": "request_tissue", "verification_status": "pending", "source_locator": null, "reference_video": null, "reviewed_by": null}
+  ]
+}

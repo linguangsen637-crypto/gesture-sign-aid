@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gesture-sign-aid"
+version = "0.1.0"
+description = "Standard Chinese Sign Language requests for SO-101 assisted item retrieval"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[project.scripts]
+signaid = "gesture_aid.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gesture_aid"]

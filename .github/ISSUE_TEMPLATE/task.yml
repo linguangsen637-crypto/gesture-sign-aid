@@ -1,0 +1,28 @@
+name: 开发任务
+description: 认领模块工作并约定验收标准
+title: "[Task] "
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 目标与交付
+      description: 完成后队友能够使用什么
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 写出可观察或可执行的检查
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依赖与接口
+      description: 需要其他模块提供哪些输入或配置
+  - type: input
+    id: owner
+    attributes:
+      label: 负责人
+      description: 填写队员 GitHub 用户名

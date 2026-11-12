@@ -1,0 +1,4 @@
+{
+  "request_water": {"skill": "pick_water", "policy_path": "SET_LOCAL_MODEL_PATH", "robot_id": "SET_ROBOT_ID"},
+  "request_tissue": {"skill": "pick_tissue", "policy_path": "SET_LOCAL_MODEL_PATH", "robot_id": "SET_ROBOT_ID"}
+}
