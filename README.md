@@ -1,8 +1,8 @@
-# SignAid · 国家通用手语辅助取物
+# SignAid · 通用手语辅助取物
 
-SignAid 面向使用国家通用手语表达需求的用户，将限定范围内的手语表达转换为取物请求，由 SO-101 机械臂将物品送至固定取物盘。
+SignAid 面向使用通用手语表达需求的用户，将限定范围内的手语表达转换为取物请求，由 SO-101 机械臂将物品送至固定取物盘。
 
-SignAid helps users who communicate in Standard Chinese Sign Language by interpreting a limited set of signs as item retrieval requests. An SO-101 robotic arm then picks up the requested item and places it in a designated pickup tray.
+SignAid helps users who communicate in Standard Sign Language by interpreting a limited set of signs as item retrieval requests. An SO-101 robotic arm then picks up the requested item and places it in a designated pickup tray.
 
 ## 当前可运行内容
 
@@ -39,7 +39,7 @@ uv run python -m unittest discover -s tests -v
 
 | 目录 | 工作 |
 | --- | --- |
-| `src/gesture_aid/perception/` | 连续画面输入、VLM 接入、国家通用手语识别 |
+| `src/gesture_aid/perception/` | 连续画面输入、VLM 接入、通用手语识别 |
 | `src/gesture_aid/workflow/` | 确认、取消、任务状态与请求去重 |
 | `src/gesture_aid/robot/` | SO-101、ACT 模型加载、抓放与停止机制 |
 | `src/gesture_aid/dashboard/` | 用户交互和操作员界面 |
