@@ -7,7 +7,7 @@
 ```bash
 git submodule update --init --recursive
 uv sync --locked
-uv run signaid wlasl stats --gloss water tissue
+uv run signaid wlasl stats --gloss cup
 ```
 
 项目引用 `dxli94/WLASL` 的 `ac00e6be631c1a2a486621b65f202219f3964d6b` 提交，标注位于 `third_party/WLASL/start_kit/WLASL_v0.3.json`。
@@ -18,16 +18,17 @@ uv run signaid wlasl stats --gloss water tissue
 
 | 词汇 | train | val | test | 总记录数 | 请求 |
 | --- | --- | --- | --- | --- | --- |
+| cup | 9 | 2 | 2 | 13 | request_cup |
 | water | 13 | 3 | 2 | 18 | request_water |
 | tissue | 5 | 2 | 1 | 8 | request_tissue |
 
-通过 `configs/sign_lexicon.json` 映射需求。真实识别模型输出 gloss 后调用 `request_from_gloss`，随后接入已有确认与执行流程。未知词汇返回 `Intent.UNCLEAR`。命令行 `demo --gloss` 用于模拟该接口。
+通过 `configs/sign_lexicon.json` 映射需求。真实识别模型输出 gloss 后调用 `request_from_gloss`，随后提交到自动执行流程。同一动作片段的重试通过 `request_id` 参数沿用相同 ID。未知词汇返回 `Intent.UNCLEAR`。命令行 `demo --gloss` 用于模拟该接口。
 
 ## 导出子集
 
 ```bash
-uv run signaid wlasl export --gloss water tissue --output data/wlasl/subset.json
-uv run signaid wlasl export --gloss water tissue --split train --output data/wlasl/train.json
+uv run signaid wlasl export --gloss cup --output data/wlasl/subset.json
+uv run signaid wlasl export --gloss cup --split train --output data/wlasl/train.json
 ```
 
 导出文件保持上游 JSON 格式和样本划分。WLASL 的词汇样本数量较少，训练或评估时记录真实可用样本数。
@@ -35,7 +36,7 @@ uv run signaid wlasl export --gloss water tissue --split train --output data/wla
 ## 准备视频工作目录
 
 ```bash
-uv run signaid wlasl prepare --gloss water tissue --output data/wlasl
+uv run signaid wlasl prepare --gloss cup --output data/wlasl
 ```
 
 生成目录包含筛选后的 `WLASL_v0.3.json`、来源记录、上游下载脚本、预处理脚本、辅助脚本和 C-UDA 协议。此命令准备工作文件，后续显式执行下载。
@@ -63,7 +64,7 @@ export PATH="$HOME/hackathon-preflight/media-tools/bin:$PATH"
 预处理片段应以 `<video_id>.mp4` 命名。
 
 ```bash
-uv run signaid wlasl manifest --gloss water tissue \
+uv run signaid wlasl manifest --gloss cup \
   --videos-dir data/wlasl/videos --output data/wlasl/manifest.json
 ```
 

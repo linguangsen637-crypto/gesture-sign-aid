@@ -1,8 +1,8 @@
 # 美国手语支持范围
 
-项目采用 WLASL 的 American Sign Language（ASL）词汇。第一版使用标注中确实存在的 `water`、`tissue` 两类，在取物场景中映射为水和纸巾请求。
+项目采用 WLASL 的 American Sign Language（ASL）词汇。第一版使用 `cup`，在取物场景中映射为自动取杯请求；现有 `water`、`tissue` 映射供后续扩展。
 
-`configs/sign_lexicon.json` 记录上游来源、固定提交、标签和意图。两个词分别有 18、8 条标注记录，实际视频可用性和识别性能待验证。
+`configs/sign_lexicon.json` 记录上游来源、固定提交、标签和意图。`cup`、`water`、`tissue` 分别有 13、18、8 条标注记录，实际视频可用性和识别性能待验证。
 
 ## 验证流程
 

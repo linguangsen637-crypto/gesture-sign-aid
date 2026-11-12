@@ -13,7 +13,7 @@
 ## 模块交付
 
 - 识别模块输出 `RetrievalRequest`。真实识别使用 WLASL 对应的 ASL 词汇标签，模糊输入使用 `Intent.UNCLEAR`。
-- 流程模块负责确认与执行状态。`request_id` 在一次会话中唯一，并随确认和结果验收传递。
+- 流程模块负责自动执行与结果状态。每次新动作使用唯一 `request_id`，同一动作的重试沿用原 ID，结果报告携带该 ID。
 - 机器人模块接入 `RobotExecutor`。执行结束后返回，交付结果由独立步骤报告。
 - 界面模块根据 `Status` 显示状态。真实执行器接入时，需要工作线程、超时、停止和故障处理。
 
@@ -21,7 +21,7 @@
 
 ```bash
 uv run python -m unittest discover -s tests -v
-uv run signaid demo --intent request_water --confirm --delivered
+uv run signaid demo --gloss cup --delivered
 ```
 
 ## 提交内容

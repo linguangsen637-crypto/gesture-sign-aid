@@ -8,6 +8,7 @@ from gesture_aid.contracts import Intent, Status
 from gesture_aid.datasets import cli as datasets_cli
 from gesture_aid.perception.mock import simulate_recognition
 from gesture_aid.perception.wlasl import request_from_gloss
+from gesture_aid.perception import camera
 from gesture_aid.robot.mock import MockRobot
 from gesture_aid.workflow.controller import RetrievalWorkflow
 
@@ -20,10 +21,18 @@ def main() -> None:
     selection.add_argument("--intent", choices=[item.value for item in Intent])
     selection.add_argument("--gloss", help="Simulate a recognizer's WLASL word label")
     demo.add_argument("--lexicon", type=Path, default=Path("configs/sign_lexicon.json"))
-    demo.add_argument("--confirm", action="store_true", help="Simulate user confirmation")
+    # Accept older scripts while automatic execution is the default.
+    demo.add_argument("--confirm", action="store_true", help=argparse.SUPPRESS)
     demo.add_argument("--delivered", action="store_true", help="Simulate a positive delivery report")
     datasets_cli.add_commands(commands)
+    camera.add_command(commands)
     args = parser.parse_args()
+    if args.command == "camera":
+        try:
+            camera.run(args)
+        except (OSError, ValueError, ImportError, RuntimeError) as error:
+            parser.exit(2, f"Camera error: {error}\n")
+        return
     if args.command == "wlasl":
         try:
             result = datasets_cli.run(args)
@@ -31,21 +40,17 @@ def main() -> None:
             parser.exit(2, f"WLASL error: {error}\n")
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return
-    if args.delivered and not args.confirm:
-        parser.error("--delivered requires --confirm")
 
     try:
         if args.gloss is not None:
             request = request_from_gloss(args.gloss, args.lexicon)
         else:
-            request = simulate_recognition(Intent(args.intent or Intent.WATER.value))
+            request = simulate_recognition(Intent(args.intent or Intent.CUP.value))
     except (OSError, ValueError, KeyError) as error:
         parser.exit(2, f"Configuration error: {error}\n")
     robot = MockRobot()
     workflow = RetrievalWorkflow(robot)
     workflow.submit(request)
-    if args.confirm and workflow.status == Status.WAITING_CONFIRMATION:
-        workflow.confirm(request.request_id)
     if args.delivered and workflow.status == Status.WAITING_RESULT:
         workflow.record_result(request.request_id, delivered=True)
     print(json.dumps({

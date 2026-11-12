@@ -1,1 +1,1 @@
-"""Request confirmation and execution lifecycle."""
+"""Automatic request execution and delivery reporting lifecycle."""

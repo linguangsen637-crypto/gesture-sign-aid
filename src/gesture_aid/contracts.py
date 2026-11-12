@@ -5,6 +5,7 @@ from enum import StrEnum
 
 
 class Intent(StrEnum):
+    CUP = "request_cup"
     WATER = "request_water"
     TISSUE = "request_tissue"
     UNCLEAR = "unclear"
@@ -12,11 +13,9 @@ class Intent(StrEnum):
 
 class Status(StrEnum):
     IDLE = "idle"
-    WAITING_CONFIRMATION = "waiting_confirmation"
     EXECUTING = "executing"
     WAITING_RESULT = "waiting_result"
     COMPLETED = "completed"
-    CANCELLED = "cancelled"
     FAILED = "failed"
 
 

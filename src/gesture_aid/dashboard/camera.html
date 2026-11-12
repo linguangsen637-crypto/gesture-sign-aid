@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignAid 手语识别</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, -apple-system, sans-serif; color: #172c29; background: #f4f6f3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1140px; margin: 40px auto; padding: 0 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 28px; }
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    p { line-height: 1.65; margin: 8px 0; }
+    .muted { color: #586b66; font-size: 14px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 24px; }
+    .view { position: relative; background: #172c29; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; display: grid; place-items: center; }
+    video { width: 100%; height: 100%; object-fit: contain; }
+    .guide { position: absolute; inset: 6.25%; border: 1px solid #ffffff88; border-radius: 8px; pointer-events: none; }
+    .placeholder { position: absolute; color: #dbe8e1; }
+    .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+    select, button { font: inherit; padding: 12px 14px; border-radius: 8px; border: 1px solid #b8c9c0; }
+    select { max-width: 100%; background: white; }
+    button { cursor: pointer; background: #16614e; color: white; border-color: #16614e; }
+    button.secondary { background: white; color: #254d40; }
+    button:disabled { opacity: .5; cursor: default; }
+    .card { padding: 24px; background: white; border-radius: 16px; border: 1px solid #e1e8e2; }
+    h2 { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+    #result { font-size: 36px; font-weight: 650; overflow-wrap: anywhere; margin: 16px 0; }
+    #status { min-height: 24px; }
+    #error { color: #a6382a; }
+    #scores { padding-left: 22px; }
+    #scores li { padding: 9px 0; border-bottom: 1px solid #edf1ed; }
+    progress { width: 100%; height: 8px; accent-color: #16614e; }
+    .details { margin-top: 28px; border-top: 1px solid #e1e8e2; padding-top: 18px; }
+    @media (max-width: 760px) { main { margin: 24px auto; } header { display: block; } .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>SignAid 手语识别</h1><p class="muted">面对摄像头完整表达 ASL，查看实时识别结果。</p></div>
+    <p class="muted">本机推理 · 机械臂待接入</p>
+  </header>
+  <div class="layout">
+    <section aria-label="摄像头">
+      <div class="view" id="view">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="guide" hidden id="guide"></div>
+        <p class="placeholder" id="placeholder">开启摄像头后，在框内展示脸部与双手</p>
+      </div>
+      <div class="controls">
+        <label for="camera">摄像头</label>
+        <select id="camera"><option value="">自动选择内置摄像头</option></select>
+        <button id="start">开始识别</button>
+        <button id="stop" class="secondary" disabled>停止</button>
+      </div>
+      <progress id="progress" max="64" value="0" aria-label="动作片段采集进度"></progress>
+      <p id="status" role="status">正在检查模型服务…</p>
+      <p id="error" role="alert"></p>
+      <p class="muted">每轮采集约 2.6 秒动作后识别。采集时完整做出手语，等待结果后再做下一次。</p>
+    </section>
+    <aside class="card">
+      <h2>识别结果</h2>
+      <p id="result" aria-live="polite">等待动作</p>
+      <p id="intent" class="muted">当前目标为 cup（杯子）</p>
+      <p id="timing" class="muted"></p>
+      <div class="details">
+        <h2>模型前五项预测</h2>
+        <ol id="scores"></ol>
+        <p class="muted" id="threshold"></p>
+        <p class="muted">分数为模型输出，现场准确率待验证。低于阈值时显示“无法确定”。</p>
+        <p class="muted">视频片段仅发送到此电脑的识别服务，在内存中处理。</p>
+      </div>
+    </aside>
+  </div>
+</main>
+<script>
+  const video = document.querySelector('#video');
+  const camera = document.querySelector('#camera');
+  const startButton = document.querySelector('#start');
+  const stopButton = document.querySelector('#stop');
+  const status = document.querySelector('#status');
+  const error = document.querySelector('#error');
+  const progress = document.querySelector('#progress');
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const context = canvas.getContext('2d');
+  let stream = null;
+  let generation = 0;
+  let controller = null;
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  async function listCameras(selected = camera.value) {
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'videoinput');
+    camera.replaceChildren(new Option('自动选择内置摄像头', ''));
+    for (const [index, device] of devices.entries()) {
+      camera.add(new Option(device.label || `摄像头 ${index + 1}`, device.deviceId));
+    }
+    camera.value = selected;
+    return devices;
+  }
+
+  function stop() {
+    generation++;
+    controller?.abort();
+    stream?.getTracks().forEach(track => track.stop());
+    stream = null;
+    video.srcObject = null;
+    startButton.disabled = false;
+    stopButton.disabled = true;
+    camera.disabled = false;
+    progress.value = 0;
+    document.querySelector('#placeholder').hidden = false;
+    document.querySelector('#guide').hidden = true;
+    status.textContent = '已停止，摄像头已释放';
+  }
+
+  async function recognizeLoop(current) {
+    while (generation === current) {
+      const frames = [];
+      let lastVideoTime = -1;
+      const began = performance.now();
+      status.textContent = '正在采集动作，请完整表达手语';
+      while (frames.length < 64 && generation === current) {
+        if (performance.now() - began > 10000) throw new Error('摄像头画面更新过慢，请检查设备或关闭其他占用相机的页面。');
+        if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+          context.drawImage(video, 0, 0, 256, 256);
+          frames.push(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+          lastVideoTime = video.currentTime;
+          progress.value = frames.length;
+        }
+        await sleep(40);
+      }
+      if (generation !== current) return;
+      status.textContent = '模型正在识别，可以暂时放下双手';
+      controller = new AbortController();
+      const response = await fetch('/recognize', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({frames}), signal: controller.signal
+      });
+      const result = await response.json();
+      if (generation !== current) return;
+      if (!response.ok) throw new Error(result.error || '识别服务返回错误');
+      document.querySelector('#result').textContent = result.gloss === 'unclear' ? '无法确定' : result.gloss;
+      const names = {request_cup: '取杯请求', request_water: '取水请求', request_tissue: '取纸巾请求', unclear: '等待明确的取物表达'};
+      document.querySelector('#intent').textContent = names[result.intent] || result.intent;
+      document.querySelector('#timing').textContent = `本轮推理 ${result.seconds} 秒`;
+      const scores = document.querySelector('#scores');
+      scores.replaceChildren();
+      for (const prediction of result.predictions) {
+        const item = document.createElement('li');
+        item.textContent = `${prediction.gloss} · ${(prediction.score * 100).toFixed(1)}%`;
+        scores.append(item);
+      }
+      status.textContent = '识别完成，即将采集下一次动作';
+      progress.value = 0;
+      await sleep(1200);
+    }
+  }
+
+  startButton.addEventListener('click', async () => {
+    const current = ++generation;
+    error.textContent = '';
+    startButton.disabled = true;
+    stopButton.disabled = false;
+    camera.disabled = true;
+    status.textContent = '正在打开摄像头…';
+    let opened = null;
+    try {
+      const selected = camera.value;
+      opened = await navigator.mediaDevices.getUserMedia({video: selected ? {deviceId: {exact: selected}} : true, audio: false});
+      const devices = await listCameras(selected);
+      const builtin = devices.find(device => /MacBook|FaceTime/i.test(device.label));
+      if (!selected && builtin && opened.getVideoTracks()[0].getSettings().deviceId !== builtin.deviceId) {
+        opened.getTracks().forEach(track => track.stop());
+        opened = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: builtin.deviceId}}, audio: false});
+      }
+      if (generation !== current) { opened.getTracks().forEach(track => track.stop()); return; }
+      stream = opened;
+      camera.value = stream.getVideoTracks()[0].getSettings().deviceId || '';
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        if (generation === current) { stop(); error.textContent = '摄像头连接已结束，请重新选择设备。'; }
+      });
+      video.srcObject = stream;
+      await video.play();
+      if (generation !== current) return;
+      document.querySelector('#view').style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+      document.querySelector('#placeholder').hidden = true;
+      document.querySelector('#guide').hidden = false;
+      await recognizeLoop(current);
+    } catch (exception) {
+      opened?.getTracks().forEach(track => track.stop());
+      if (generation !== current) return;
+      stop();
+      error.textContent = exception.name === 'NotAllowedError'
+        ? '请在浏览器和 macOS 设置中允许摄像头访问，然后重新开始。'
+        : exception.message;
+    }
+  });
+  stopButton.addEventListener('click', stop);
+  window.addEventListener('pagehide', stop);
+  document.addEventListener('visibilitychange', () => { if (document.hidden && !stopButton.disabled) stop(); });
+  async function initialize() {
+    try {
+      const response = await fetch('/health');
+      if (!response.ok) throw new Error('识别服务不可用');
+      const health = await response.json();
+      status.textContent = '模型已就绪，点击“开始识别”';
+      document.querySelector('#threshold').textContent = `${health.model} · 初始阈值 ${(health.threshold * 100).toFixed(0)}%`;
+      await listCameras();
+    } catch (exception) { error.textContent = exception.message; }
+  }
+  initialize();
+</script>
+</body>
+</html>

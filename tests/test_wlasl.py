@@ -10,6 +10,8 @@ import unittest
 from gesture_aid.contracts import Intent
 from gesture_aid.datasets.wlasl import WLASLDataset, prepare_workspace, write_json
 from gesture_aid.perception.wlasl import request_from_gloss
+from gesture_aid.robot.mock import MockRobot
+from gesture_aid.workflow.controller import RetrievalWorkflow
 
 
 def video(video_id: str, split: str, frame_end: int = -1) -> dict:
@@ -87,6 +89,50 @@ class WLASLTests(unittest.TestCase):
         write_json(lexicon, {"entries": [{"gloss": "water", "intent": "request_water"}]})
         self.assertEqual(request_from_gloss(" Water ", lexicon).intent, Intent.WATER)
         self.assertEqual(request_from_gloss("book", lexicon).intent, Intent.UNCLEAR)
+
+    def test_cup_clip_retry_uses_stable_request_id(self) -> None:
+        robot = MockRobot()
+        workflow = RetrievalWorkflow(robot)
+        request = request_from_gloss(" Cup ", request_id="clip-1")
+        self.assertEqual(request.intent, Intent.CUP)
+        self.assertEqual(request.recognized_sign_id, "wlasl:cup")
+        workflow.submit(request)
+        workflow.record_result(request.request_id, delivered=True)
+        workflow.reset()
+        with self.assertRaises(ValueError):
+            workflow.submit(request_from_gloss("cup", request_id="clip-1"))
+        self.assertEqual(robot.executed_skills, ["pick_cup"])
+
+    def test_cli_automatically_executes_supported_labels(self) -> None:
+        for gloss in ("cup", "water", "tissue"):
+            with self.subTest(gloss=gloss):
+                result = subprocess.run([
+                    sys.executable, "-m", "gesture_aid.cli", "demo", "--gloss", gloss,
+                ], capture_output=True, text=True, check=True)
+                report = json.loads(result.stdout)
+                self.assertEqual(report["executed_skills"], [f"pick_{gloss}"])
+                self.assertEqual(report["status"], "waiting_result")
+                self.assertIsNone(report["delivery_report"])
+
+    def test_cli_delivery_report_and_legacy_flag(self) -> None:
+        for flags in (["--delivered"], ["--confirm", "--delivered"]):
+            with self.subTest(flags=flags):
+                result = subprocess.run([
+                    sys.executable, "-m", "gesture_aid.cli", "demo", "--gloss", "cup", *flags,
+                ], capture_output=True, text=True, check=True)
+                report = json.loads(result.stdout)
+                self.assertEqual(report["status"], "completed")
+                self.assertEqual(report["executed_skills"], ["pick_cup"])
+                self.assertEqual(report["delivery_report"], "simulated_positive")
+
+    def test_cli_unknown_label_does_not_execute(self) -> None:
+        result = subprocess.run([
+            sys.executable, "-m", "gesture_aid.cli", "demo", "--gloss", "unknown", "--delivered",
+        ], capture_output=True, text=True, check=True)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["status"], "idle")
+        self.assertEqual(report["executed_skills"], [])
+        self.assertIsNone(report["delivery_report"])
 
     def test_cli_export_and_manifest(self) -> None:
         output = self.root / "subset.json"
