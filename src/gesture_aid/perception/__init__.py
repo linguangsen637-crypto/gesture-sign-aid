@@ -1,1 +1,1 @@
-"""Standard Chinese Sign Language recognition integration boundary."""
+"""Sign recognition boundary for simulated requests and a local WLASL catalog."""

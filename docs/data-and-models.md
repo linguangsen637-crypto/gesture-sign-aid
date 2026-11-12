@@ -9,6 +9,7 @@
 | ACT 模型与恢复状态 | Ubuntu 训练输出目录，逐次记录实际路径 |
 | Mac 部署模型 | 本机模型目录，通过个人配置指定 |
 | 手语示范及测试片段 | 独立资料目录或获授权的数据集仓库 |
+| WLASL v0.3 目录与视频 | 本机 `datasets/wlasl/`，不提交。见 `docs/sign-language-scope.md` |
 
 同步 LeRobot 数据集时保留完整 `data/`、`videos/`、`meta/`。部署模型保留权重、配置和归一化参数。恢复训练所需的 checkpoint 状态单独保存。
 

@@ -29,6 +29,9 @@ uv run signaid demo --intent request_tissue --confirm --delivered
 # 不明确的识别结果保持等待
 uv run signaid demo --intent unclear
 
+# 检查本机 WLASL 目录。目录缺失时退出码为 1
+uv run signaid wlasl-status
+
 # 运行流程测试
 uv run python -m unittest discover -s tests -v
 ```
@@ -78,3 +81,4 @@ uv run python -m unittest discover -s tests -v
 - [LeRobot](https://github.com/huggingface/lerobot)
 - [MakerMods Lab](https://github.com/makermods-robotics/makermodslab)
 - [ACT](https://huggingface.co/docs/lerobot/act)
+- [WLASL](https://github.com/dxli94/WLASL)（美国手语词级语料，C-UDA，仅学术与计算用途。视频和完整目录放在本机 `datasets/wlasl/`，不提交到 Git）

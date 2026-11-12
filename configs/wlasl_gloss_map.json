@@ -1,0 +1,11 @@
+{
+  "dataset": "WLASL",
+  "catalog_version": "v0.3",
+  "language": "American Sign Language",
+  "source": "https://github.com/dxli94/WLASL",
+  "license": "C-UDA-1.0",
+  "mappings": [
+    {"gloss": "water", "intent": "request_water", "sign_id": "wlasl_water"},
+    {"gloss": "tissue", "intent": "request_tissue", "sign_id": "wlasl_tissue"}
+  ]
+}
