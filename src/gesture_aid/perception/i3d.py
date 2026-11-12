@@ -31,7 +31,8 @@ class I3DRecognizer:
     def predict(self, frames: list[np.ndarray]) -> list[dict]:
         if not 16 <= len(frames) <= 64:
             raise ValueError("Provide 16 to 64 frames in chronological order.")
-        # Match the upstream video loader: OpenCV BGR, square resize, center crop.
+        # Browser provides an undistorted square ROI. Keep the upstream video's
+        # BGR channel order and [-1, 1] normalization, then center-crop to 224.
         images = [cv2.resize(frame, (256, 256))[16:240, 16:240] for frame in frames]
         array = np.stack(images).astype(np.float32) / 127.5 - 1
         inputs = torch.from_numpy(array.transpose(3, 0, 1, 2).copy()).unsqueeze(0)

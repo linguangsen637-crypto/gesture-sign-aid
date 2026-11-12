@@ -16,7 +16,7 @@
     .layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 24px; }
     .view { position: relative; background: #172c29; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; display: grid; place-items: center; }
     video { width: 100%; height: 100%; object-fit: contain; }
-    .guide { position: absolute; inset: 6.25%; border: 1px solid #ffffff88; border-radius: 8px; pointer-events: none; }
+    .guide { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 2px solid #ffffffbb; border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 100vmax #0004; }
     .placeholder { position: absolute; color: #dbe8e1; }
     .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
     select, button { font: inherit; padding: 12px 14px; border-radius: 8px; border: 1px solid #b8c9c0; }
@@ -58,7 +58,7 @@
       <progress id="progress" max="64" value="0" aria-label="动作片段采集进度"></progress>
       <p id="status" role="status">正在检查模型服务…</p>
       <p id="error" role="alert"></p>
-      <p class="muted">每轮采集约 2.6 秒动作后识别。采集时完整做出手语，等待结果后再做下一次。</p>
+      <p class="muted">每轮先倒计时 3 秒，再采集约 2.6 秒。倒计时结束后完整做一次 ASL 动作。保持脸、上半身和双手在方框内；方框显示模型实际看到的范围。</p>
     </section>
     <aside class="card">
       <h2>识别结果</h2>
@@ -69,7 +69,7 @@
         <h2>模型前五项预测</h2>
         <ol id="scores"></ol>
         <p class="muted" id="threshold"></p>
-        <p class="muted">分数为模型输出，现场准确率待验证。低于阈值时显示“无法确定”。</p>
+        <p class="muted">这里是 2,000 类模型的原始候选，包含无关词。主结果只接受已配置的取物词；低分或其他词显示“无法确定”。分数不等于准确率。</p>
         <p class="muted">视频片段仅发送到此电脑的识别服务，在内存中处理。</p>
       </div>
     </aside>
@@ -90,6 +90,15 @@
   let generation = 0;
   let controller = null;
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  function updateGuide() {
+    if (!video.videoWidth || !video.videoHeight) return;
+    // Capture a centered square without stretching; I3D then removes 16 px per edge.
+    const side = Math.min(video.videoWidth, video.videoHeight) * 224 / 256;
+    const guide = document.querySelector('#guide');
+    guide.style.width = `${side / video.videoWidth * 100}%`;
+    guide.style.height = `${side / video.videoHeight * 100}%`;
+  }
 
   async function listCameras(selected = camera.value) {
     const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'videoinput');
@@ -118,6 +127,12 @@
 
   async function recognizeLoop(current) {
     while (generation === current) {
+      for (let seconds = 3; seconds > 0; seconds--) {
+        if (generation !== current) return;
+        status.textContent = `准备好，在 ${seconds} 秒后开始做一次手语`;
+        await sleep(1000);
+      }
+      if (generation !== current) return;
       const frames = [];
       let lastVideoTime = -1;
       const began = performance.now();
@@ -125,7 +140,9 @@
       while (frames.length < 64 && generation === current) {
         if (performance.now() - began > 10000) throw new Error('摄像头画面更新过慢，请检查设备或关闭其他占用相机的页面。');
         if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
-          context.drawImage(video, 0, 0, 256, 256);
+          const side = Math.min(video.videoWidth, video.videoHeight);
+          context.drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2,
+            side, side, 0, 0, 256, 256);
           frames.push(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
           lastVideoTime = video.currentTime;
           progress.value = frames.length;
@@ -186,6 +203,7 @@
       await video.play();
       if (generation !== current) return;
       document.querySelector('#view').style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+      updateGuide();
       document.querySelector('#placeholder').hidden = true;
       document.querySelector('#guide').hidden = false;
       await recognizeLoop(current);
@@ -199,6 +217,12 @@
     }
   });
   stopButton.addEventListener('click', stop);
+  video.addEventListener('resize', () => {
+    if (video.videoWidth && video.videoHeight) {
+      document.querySelector('#view').style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+      updateGuide();
+    }
+  });
   window.addEventListener('pagehide', stop);
   document.addEventListener('visibilitychange', () => { if (document.hidden && !stopButton.disabled) stop(); });
   async function initialize() {

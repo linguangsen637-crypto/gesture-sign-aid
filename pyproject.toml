@@ -11,8 +11,9 @@ requires-python = ">=3.12,<3.14"
 dependencies = []
 
 [project.optional-dependencies]
-vision = ["torch>=2.6,<3", "numpy>=1.26,<3", "opencv-python-headless>=4.10,<5"]
-wlasl = ["requests>=2.32,<3", "yt-dlp>=2025.1.26", "opencv-python-headless>=4.10,<5"]
+landmarks = ["mediapipe>=0.10.21,<0.11", "numpy>=1.26,<3", "opencv-contrib-python>=4.10,<5"]
+vision = ["torch>=2.6,<3", "numpy>=1.26,<3", "opencv-contrib-python>=4.10,<5"]
+wlasl = ["requests>=2.32,<3", "yt-dlp>=2025.1.26", "opencv-contrib-python>=4.10,<5"]
 
 [project.scripts]
 signaid = "gesture_aid.cli:main"

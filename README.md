@@ -6,22 +6,41 @@ SignAid aims to assist American Sign Language (ASL) users through a limited-voca
 
 ## 当前可运行内容
 
-已接入固定版本 WLASL 官方仓库，提供词汇查询、子集导出、上游视频脚本工作目录准备、本地视频索引和词汇到取物请求的映射。基础框架提供自动执行与结果验收状态、模拟机械臂、测试和协作文档。摄像头页面支持本机 WLASL2000 I3D 推理，显示预测词、分数和对应需求。实际 ASL 动作识别效果待现场评估，真实 SO-101 与 ACT 执行仍待接入。
+已接入固定版本 WLASL 官方仓库，提供词汇查询、子集导出、上游视频脚本工作目录准备、本地视频索引和词汇到取物请求的映射。基础框架提供自动执行与结果验收状态、模拟机械臂、测试和协作文档。摄像头页面支持本机 MediaPipe 关键点与 CUP 模板匹配，显示骨架、匹配距离和单次识别事件。实际 ASL 动作识别效果待现场评估，真实 SO-101 与 ACT 执行仍待接入。
 
 ## 摄像头手语识别
 
-当前 Mac 的权重和标签已放在 `models/wlasl-i3d/`。在项目根目录执行。
+默认使用 MediaPipe 双手＋肩膀关键点与 DTW CUP 模板匹配。摄像头只产生本地识别事件，不连接机械臂。旧 I3D 后端保留用于对照实验。
 
 ```bash
-uv sync --extra vision --extra wlasl
-uv run --extra vision --extra wlasl signaid camera
+uv sync --locked --extra landmarks
+uv run --extra landmarks signaid templates setup
+uv run --extra landmarks signaid camera
 ```
 
-打开 `http://localhost:8765`，点击“开始识别”并允许摄像头访问。页面优先选择 Mac 内置摄像头，也可以停止后从列表选择其他相机。让脸部和双手保持在画面框内，每轮采集约 2.6 秒完整动作，再显示模型前五项预测。点击“停止”释放摄像头，切换到后台或关闭页面也会释放。
+打开 `http://localhost:8765`，点击“开启摄像头”。页面显示双手骨架和肩膀位置，连续匹配完整动作。一次 CUP 通过两次连续匹配后只产生一个事件；双手移出画面至少 0.8 秒、距上次触发至少 1.5 秒后重新允许识别。停止、切换到后台或关闭页面都会释放摄像头。
 
-模型使用 CPU 在本机推理，浏览器将 JPEG 片段发送到本机服务，在内存中处理。初始分数阈值为 0.5，可用 `--threshold` 调整；该值需通过实际正负样本校准。当前采用固定长度片段，动作跨越片段边界可能影响识别，自动动作分段待实现。摄像头页面展示识别结果与需求，机械臂连接状态为待接入。
+首次使用先准备模板。可导入可用的 WLASL CUP 视频和其他词汇负样本：
 
-其他协作者需要从 [模型镜像文件列表](https://huggingface.co/spaces/cedssama/I3D_Sign_Language_Classification/tree/38f30b7a60a9e7336167b1c1eed5b3923a11da9d) 下载 `weights/asl2000/FINAL_nslt_2000_iters=5104_top1=32.48_top5=57.31_top10=66.31.pt` 和 `wlasl_class_list.txt`，分别保存为 `models/wlasl-i3d/model.pt` 和 `models/wlasl-i3d/labels.txt`。模型文件由 Git 忽略，来源及校验值见 `THIRD_PARTY_NOTICES.md`。
+```bash
+uv run --extra landmarks signaid templates import-wlasl --gloss cup --label cup --download
+uv run --extra landmarks signaid templates import-wlasl --gloss book --label negative --download
+```
+
+`--download` 只获取标注中可直接下载的完整单词 MP4；旧链接可能失效。YouTube 合集和 SWF 需按 [WLASL 指南](docs/wlasl.md) 另行准备。原 train 划分加入模板，val/test 留作测试，不参与匹配。模型与关键点模板分别保存在 Git 忽略的 `models/mediapipe/` 和 `data/cup-templates/`。
+
+也可在页面选择 CUP 或干扰动作，点击“倒计时并录制 3 秒”。只保存关键点，不保存摄像头视频。务必补充现场挥手、挠头、拿杯等负样本，并在其他录制场次选择“独立测试样本”。没有正负模板、双手或肩膀检测不足、静止动作、模糊匹配时均不触发。
+
+```bash
+uv run --extra landmarks signaid templates stats
+uv run --extra landmarks signaid templates evaluate
+# 阈值是 DTW 距离，越低越严格；初始 0.4 未经现场校准
+uv run --extra landmarks signaid camera --distance-threshold 0.4
+```
+
+当前是小词表研究原型，距离不等于识别概率。没有独立测试样本时，评估输出为空值，不报告准确率。模板回放只能用于回归检查。完整说明见 [关键点与模板匹配](docs/cup-landmarks.md)。
+
+旧 I3D 实验入口：`uv run --extra vision signaid camera --backend i3d`，另需 `models/wlasl-i3d/model.pt` 和 `labels.txt`，来源见 `THIRD_PARTY_NOTICES.md`。
 
 ## 快速开始
 
@@ -58,7 +77,7 @@ uv run signaid demo --intent unclear
 uv run python -m unittest discover -s tests -v
 ```
 
-每次 demo 命令启动一个独立的内存会话。输出中的 `mode` 为 `simulation`，完整交付示例中的结果也为模拟结果。`--gloss` 接受人工指定的标签，视频到标签的识别模型待接入。
+每次 demo 命令启动一个独立的内存会话。输出中的 `mode` 为 `simulation`，完整交付示例中的结果也为模拟结果。`--gloss` 接受人工指定的标签；真实摄像头识别使用独立的 `camera` 命令。
 
 WLASL 固定版本包含 2,000 个 ASL 词汇、21,083 条视频标注。其中 `cup` 有 13 条，`water` 有 18 条，`tissue` 有 8 条，实际视频可用性需下载后检查。视频准备、可选依赖、FFmpeg 和上游识别方法见 [WLASL 接入指南](docs/wlasl.md)。
 

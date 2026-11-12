@@ -8,7 +8,7 @@ from gesture_aid.contracts import Intent, Status
 from gesture_aid.datasets import cli as datasets_cli
 from gesture_aid.perception.mock import simulate_recognition
 from gesture_aid.perception.wlasl import request_from_gloss
-from gesture_aid.perception import camera
+from gesture_aid.perception import camera, template_cli
 from gesture_aid.robot.mock import MockRobot
 from gesture_aid.workflow.controller import RetrievalWorkflow
 
@@ -26,7 +26,15 @@ def main() -> None:
     demo.add_argument("--delivered", action="store_true", help="Simulate a positive delivery report")
     datasets_cli.add_commands(commands)
     camera.add_command(commands)
+    template_cli.add_commands(commands)
     args = parser.parse_args()
+    if args.command == "templates":
+        try:
+            result = template_cli.run(args)
+        except (OSError, ValueError, ImportError, RuntimeError) as error:
+            parser.exit(2, f"Template error: {error}\n")
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return
     if args.command == "camera":
         try:
             camera.run(args)

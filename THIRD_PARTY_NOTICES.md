@@ -31,3 +31,11 @@ SignAid 的数据适配代码位于 `src/gesture_aid/datasets`。上游下载器
 - `labels.txt` 原名为 `wlasl_class_list.txt`，SHA-256 为 `2c131fb7f052340aa7ae8579c8cae9746028740b8e62efeb957a7790dbefcf4a`。
 
 权重采用 PyTorch `weights_only=True` 加载，使用 WLASL 对应的数据与模型条款。下载来源、大小与校验值同时保存在本机 `models/wlasl-i3d/provenance.json`。
+
+## MediaPipe 关键点模型
+
+- MediaPipe Python SDK 来自 PyPI 的 `mediapipe`，上游 https://github.com/google-ai-edge/mediapipe ，源码采用 Apache-2.0；模型使用条件请同时参照官方模型卡。
+- 手部模型：https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+- 姿态 lite 模型：https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+- `signaid templates setup` 保存下载 URL 和 SHA256 至本机 `models/mediapipe/provenance.json`。模型二进制不提交 Git。
+- WLASL 下载视频、派生关键点保留样本来源；仍适用原数据条件。初始 CUP 模板来自 WLASL 14287、14288；初始非 CUP 模板来自 book 69241、07068。它们不构成独立测试集，也没有经过 ASL 专业人员额外复核。

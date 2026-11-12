@@ -14,11 +14,17 @@ def add_command(commands) -> None:
     parser = commands.add_parser("camera", help="Open local webcam sign recognition")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--project", type=Path, default=Path.cwd())
-    parser.add_argument("--model-dir", type=Path, default=Path("models/wlasl-i3d"))
+    parser.add_argument("--backend", choices=("landmarks", "i3d"), default="landmarks")
+    parser.add_argument("--model-dir", type=Path)
+    parser.add_argument("--templates-dir", type=Path, default=Path("data/cup-templates"))
+    parser.add_argument("--distance-threshold", type=float, default=0.4)
     parser.add_argument("--threshold", type=float, default=0.5)
 
 
 def run(args) -> None:
+    if args.backend == "landmarks":
+        from gesture_aid.perception.landmark_camera import run as run_landmarks
+        return run_landmarks(args)
     import cv2
     import numpy as np
 
@@ -30,7 +36,7 @@ def run(args) -> None:
     if not math.isfinite(args.threshold) or not 0 < args.threshold <= 1:
         raise ValueError("Threshold must be greater than zero and at most one.")
     project = args.project.resolve()
-    model_dir = args.model_dir.resolve()
+    model_dir = (args.model_dir or project / "models/wlasl-i3d").resolve()
     recognizer = I3DRecognizer(project, model_dir)
     lexicon = project / "configs/sign_lexicon.json"
     page = (Path(__file__).parent.parent / "dashboard/camera.html").read_bytes()
@@ -94,6 +100,8 @@ def run(args) -> None:
                 best = predictions[0]
                 gloss = best["gloss"] if best["score"] >= args.threshold else "unclear"
                 request = request_from_gloss(gloss, lexicon, request_id=str(uuid4()))
+                if request.intent.value == "unclear":
+                    gloss = "unclear"
                 self.reply(200, {
                     "gloss": gloss,
                     "score": best["score"],

@@ -12,6 +12,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install matching test dependencies
+        run: python -m pip install "numpy>=1.26,<3" "opencv-contrib-python>=4.10,<5"
       - name: Verify lifecycle
         env:
           PYTHONPATH: src
