@@ -26,6 +26,8 @@ class CameraApp:
         self.extractor, self.bank, self.sender = extractor, bank, sender
         self.lock = Lock()
         self.sessions = {}
+        self.pending_run = False
+        self.settle = lambda: time.sleep(0.4)
 
     def health(self):
         return dict(status='ok', model='MediaPipe Hands + Pose / DTW', templates=self.bank.summary(),
@@ -80,11 +82,26 @@ class CameraApp:
                 # Prefer a qualifying full-sequence match, otherwise show nearest diagnostic.
                 s['result'] = min(results, key=lambda r: (r['gloss'] != 'cup', r.get('cup_distance') if r.get('cup_distance') is not None else 999))
                 event = s['gate'].match(s['result']['gloss'] == 'cup', now)
-        if event and self.sender is not None:
-            self.sender.submit('request_cup')
+        release_camera = bool(event and self.sender is not None)
+        if release_camera:
+            # The browser must drop its camera before OpenCV opens the policy
+            # camera. Starting here would race that release and feed the policy
+            # a different device than MakerMods' Run on robot.
+            self.pending_run = True
         return dict(feature=feature, overlay=overlay, match=s['result'], latched=s['gate'].latched,
                     event_id=event, intent='request_cup' if event else 'unclear',
+                    release_camera=release_camera,
                     **_robot_fields(self.sender), templates=self.bank.summary())
+
+    def execute(self):
+        if self.sender is None:
+            raise ValueError('No arm is attached')
+        if not self.pending_run:
+            raise ValueError('No cup request is waiting')
+        self.pending_run = False
+        self.settle()
+        self.sender.submit('request_cup')
+        return dict(accepted=True, **_robot_fields(self.sender))
 
 
 def handler_for(app):
@@ -126,14 +143,14 @@ def handler_for(app):
             if not self.local():
                 self.reply(403, {'error':'Local access only'})
                 return
-            if self.path not in ('/frame', '/templates'):
+            if self.path not in ('/frame', '/templates', '/execute'):
                 self.reply(404, {'error':'Not found'})
                 return
             if self.headers.get_content_type() != 'application/json':
                 self.reply(415, {'error':'Expected JSON'})
                 return
             if not app.lock.acquire(blocking=False):
-                self.reply(409, {'error':'模型正在处理另一请求，请稍后重试。'})
+                self.reply(409, {'error':'The model is handling another request. Try again in a moment.'})
                 return
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -145,6 +162,8 @@ def handler_for(app):
                     raise ValueError('Expected object')
                 if self.path == '/frame':
                     result = app.frame(data)
+                elif self.path == '/execute':
+                    result = app.execute()
                 else:
                     item = app.bank.save(data['frames'], data['label'], data['split'], data.get('name',''))
                     result = dict(saved=item, templates=app.bank.summary(), **_robot_fields(app.sender))

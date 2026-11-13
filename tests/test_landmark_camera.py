@@ -86,6 +86,7 @@ class CameraTests(unittest.TestCase):
                 return dict(robot_connected=True, robot_busy=False, request_id='req', request_error=None)
         self.app.extractor=VisibleHands()
         self.app.sender=Sender()
+        self.app.settle=lambda: None
         sent=None
         with patch.object(self.app.bank, 'match', return_value={'gloss':'cup','reason':'matched','cup_distance':.1}):
             for i in range(16):
@@ -94,7 +95,9 @@ class CameraTests(unittest.TestCase):
                     result=self.app.frame(dict(self.data,timestamp=now))
                 if result['event_id']:
                     sent=result
-        self.assertEqual(self.app.sender.intents, ['request_cup'])
+        self.assertEqual(self.app.sender.intents, [])
         self.assertIsNotNone(sent)
-        self.assertTrue(sent['robot_connected'])
+        self.assertTrue(sent['release_camera'])
         self.assertEqual(sent['intent'], 'request_cup')
+        self.app.execute()
+        self.assertEqual(self.app.sender.intents, ['request_cup'])

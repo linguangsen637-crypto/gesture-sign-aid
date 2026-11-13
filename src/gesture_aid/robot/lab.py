@@ -21,8 +21,8 @@ class LabError(RuntimeError):
 
 
 _HUB_POLICY_REF = re.compile(r"^[^@]+@(?:checkpoints/\d+|root)$")
-# Same launch as MakerMods Policy studio → cupfinal → step 10000 → Run on robot.
-FINAL_CUP_POLICY = "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/010000"
+# Same launch as MakerMods Policy studio → cupfinal → step 9000 → Run on robot.
+FINAL_CUP_POLICY = "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/009000"
 FINAL_CUP_DURATION_S = 60
 
 

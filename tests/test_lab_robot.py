@@ -137,7 +137,7 @@ class LabRobotTests(unittest.TestCase):
             loaded = profile(Path(directory))
             pinned = loaded.pin_final_cup()
         skill = pinned.skill_for(Intent.CUP)
-        self.assertEqual(skill.policy_path, "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/010000")
+        self.assertEqual(skill.policy_path, "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/009000")
         self.assertEqual(skill.duration_s, 60)
         self.assertEqual(skill.task, "")
 

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SignAid 手语识别</title>
+  <title>SignAid sign recognition</title>
   <style>
     :root { color-scheme: light; font-family: Inter, -apple-system, sans-serif; color: #172c29; background: #f4f6f3; }
     * { box-sizing: border-box; }
@@ -39,38 +39,38 @@
 <body>
 <main>
   <header>
-    <div><h1>SignAid 手语识别</h1><p class="muted">面对摄像头完整表达 ASL，查看实时识别结果。</p></div>
-    <p class="muted">本机推理 · 机械臂待接入</p>
+    <div><h1>SignAid sign recognition</h1><p class="muted">Face the camera and sign a complete ASL gesture to see the live result.</p></div>
+    <p class="muted">On this computer · arm not connected yet</p>
   </header>
   <div class="layout">
-    <section aria-label="摄像头">
+    <section aria-label="Camera">
       <div class="view" id="view">
         <video id="video" autoplay muted playsinline></video>
         <div class="guide" hidden id="guide"></div>
-        <p class="placeholder" id="placeholder">开启摄像头后，在框内展示脸部与双手</p>
+        <p class="placeholder" id="placeholder">After the camera starts, keep your face and both hands inside the frame.</p>
       </div>
       <div class="controls">
-        <label for="camera">摄像头</label>
-        <select id="camera"><option value="">自动选择内置摄像头</option></select>
-        <button id="start">开始识别</button>
-        <button id="stop" class="secondary" disabled>停止</button>
+        <label for="camera">Camera</label>
+        <select id="camera"><option value="">Use the built-in camera</option></select>
+        <button id="start">Start recognition</button>
+        <button id="stop" class="secondary" disabled>Stop</button>
       </div>
-      <progress id="progress" max="64" value="0" aria-label="动作片段采集进度"></progress>
-      <p id="status" role="status">正在检查模型服务…</p>
+      <progress id="progress" max="64" value="0" aria-label="Gesture capture progress"></progress>
+      <p id="status" role="status">Checking the model service…</p>
       <p id="error" role="alert"></p>
-      <p class="muted">每轮先倒计时 3 秒，再采集约 2.6 秒。倒计时结束后完整做一次 ASL 动作。保持脸、上半身和双手在方框内；方框显示模型实际看到的范围。</p>
+      <p class="muted">Each round counts down for 3 seconds, then records about 2.6 seconds. Sign one complete ASL gesture after the countdown. Keep your face, upper body, and both hands inside the frame. The frame is what the model actually sees.</p>
     </section>
     <aside class="card">
-      <h2>识别结果</h2>
-      <p id="result" aria-live="polite">等待动作</p>
-      <p id="intent" class="muted">当前目标为 cup（杯子）</p>
+      <h2>Recognition</h2>
+      <p id="result" aria-live="polite">Waiting for a gesture</p>
+      <p id="intent" class="muted">The current target is cup.</p>
       <p id="timing" class="muted"></p>
       <div class="details">
-        <h2>模型前五项预测</h2>
+        <h2>Top five model predictions</h2>
         <ol id="scores"></ol>
         <p class="muted" id="threshold"></p>
-        <p class="muted">这里是 2,000 类模型的原始候选，包含无关词。主结果只接受已配置的取物词；低分或其他词显示“无法确定”。分数不等于准确率。</p>
-        <p class="muted">视频片段仅发送到此电脑的识别服务，在内存中处理。</p>
+        <p class="muted">These are the raw candidates from the 2,000-class model, including unrelated words. The main result accepts only the configured retrieval words. A low score or any other word is shown as “unclear”. A score is not an accuracy.</p>
+        <p class="muted">Video clips are sent only to the recognition service on this computer and are processed in memory.</p>
       </div>
     </aside>
   </div>
@@ -102,9 +102,9 @@
 
   async function listCameras(selected = camera.value) {
     const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'videoinput');
-    camera.replaceChildren(new Option('自动选择内置摄像头', ''));
+    camera.replaceChildren(new Option('Use the built-in camera', ''));
     for (const [index, device] of devices.entries()) {
-      camera.add(new Option(device.label || `摄像头 ${index + 1}`, device.deviceId));
+      camera.add(new Option(device.label || `Camera ${index + 1}`, device.deviceId));
     }
     camera.value = selected;
     return devices;
@@ -122,23 +122,23 @@
     progress.value = 0;
     document.querySelector('#placeholder').hidden = false;
     document.querySelector('#guide').hidden = true;
-    status.textContent = '已停止，摄像头已释放';
+    status.textContent = 'Stopped. The camera is released.';
   }
 
   async function recognizeLoop(current) {
     while (generation === current) {
       for (let seconds = 3; seconds > 0; seconds--) {
         if (generation !== current) return;
-        status.textContent = `准备好，在 ${seconds} 秒后开始做一次手语`;
+        status.textContent = `Get ready. Sign once in ${seconds} seconds.`;
         await sleep(1000);
       }
       if (generation !== current) return;
       const frames = [];
       let lastVideoTime = -1;
       const began = performance.now();
-      status.textContent = '正在采集动作，请完整表达手语';
+      status.textContent = 'Recording the gesture. Sign it all the way through.';
       while (frames.length < 64 && generation === current) {
-        if (performance.now() - began > 10000) throw new Error('摄像头画面更新过慢，请检查设备或关闭其他占用相机的页面。');
+        if (performance.now() - began > 10000) throw new Error('The camera image is updating too slowly. Check the device or close other pages that are using a camera.');
         if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
           const side = Math.min(video.videoWidth, video.videoHeight);
           context.drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2,
@@ -150,7 +150,7 @@
         await sleep(40);
       }
       if (generation !== current) return;
-      status.textContent = '模型正在识别，可以暂时放下双手';
+      status.textContent = 'The model is recognizing. You can lower your hands.';
       controller = new AbortController();
       const response = await fetch('/recognize', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -158,11 +158,11 @@
       });
       const result = await response.json();
       if (generation !== current) return;
-      if (!response.ok) throw new Error(result.error || '识别服务返回错误');
-      document.querySelector('#result').textContent = result.gloss === 'unclear' ? '无法确定' : result.gloss;
-      const names = {request_cup: '取杯请求', request_water: '取水请求', request_tissue: '取纸巾请求', unclear: '等待明确的取物表达'};
+      if (!response.ok) throw new Error(result.error || 'The recognition service returned an error.');
+      document.querySelector('#result').textContent = result.gloss === 'unclear' ? 'Unclear' : result.gloss;
+      const names = {request_cup: 'Request a cup', request_water: 'Request water', request_tissue: 'Request a tissue', unclear: 'Waiting for a clear retrieval sign'};
       document.querySelector('#intent').textContent = names[result.intent] || result.intent;
-      document.querySelector('#timing').textContent = `本轮推理 ${result.seconds} 秒`;
+      document.querySelector('#timing').textContent = `This round took ${result.seconds} seconds.`;
       const scores = document.querySelector('#scores');
       scores.replaceChildren();
       for (const prediction of result.predictions) {
@@ -170,7 +170,7 @@
         item.textContent = `${prediction.gloss} · ${(prediction.score * 100).toFixed(1)}%`;
         scores.append(item);
       }
-      status.textContent = '识别完成，即将采集下一次动作';
+      status.textContent = 'Recognition finished. The next gesture starts soon.';
       progress.value = 0;
       await sleep(1200);
     }
@@ -182,7 +182,7 @@
     startButton.disabled = true;
     stopButton.disabled = false;
     camera.disabled = true;
-    status.textContent = '正在打开摄像头…';
+    status.textContent = 'Opening the camera…';
     let opened = null;
     try {
       const selected = camera.value;
@@ -197,7 +197,7 @@
       stream = opened;
       camera.value = stream.getVideoTracks()[0].getSettings().deviceId || '';
       stream.getVideoTracks()[0].addEventListener('ended', () => {
-        if (generation === current) { stop(); error.textContent = '摄像头连接已结束，请重新选择设备。'; }
+        if (generation === current) { stop(); error.textContent = 'The camera connection ended. Choose a device and start again.'; }
       });
       video.srcObject = stream;
       await video.play();
@@ -212,7 +212,7 @@
       if (generation !== current) return;
       stop();
       error.textContent = exception.name === 'NotAllowedError'
-        ? '请在浏览器和 macOS 设置中允许摄像头访问，然后重新开始。'
+        ? 'Allow camera access in the browser and in macOS, then start again.'
         : exception.message;
     }
   });
@@ -228,10 +228,10 @@
   async function initialize() {
     try {
       const response = await fetch('/health');
-      if (!response.ok) throw new Error('识别服务不可用');
+      if (!response.ok) throw new Error('The recognition service is unavailable.');
       const health = await response.json();
-      status.textContent = '模型已就绪，点击“开始识别”';
-      document.querySelector('#threshold').textContent = `${health.model} · 初始阈值 ${(health.threshold * 100).toFixed(0)}%`;
+      status.textContent = 'The model is ready. Click “Start recognition”.';
+      document.querySelector('#threshold').textContent = `${health.model} · initial threshold ${(health.threshold * 100).toFixed(0)}%`;
       await listCameras();
     } catch (exception) { error.textContent = exception.message; }
   }

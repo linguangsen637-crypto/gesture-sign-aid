@@ -10,7 +10,7 @@ VERSION = 1
 
 def validate_frames(frames, minimum=8):
     if not isinstance(frames, list) or not minimum <= len(frames) <= 96:
-        raise ValueError(f"需要 {minimum}–96 帧关键点，请重新录制完整动作。")
+        raise ValueError(f"Record {minimum}–96 landmark frames of one complete gesture.")
     last = -math.inf
     for f in frames:
         if not isinstance(f, dict):
@@ -26,7 +26,7 @@ def validate_frames(frames, minimum=8):
             raise ValueError("Frame times must be finite and strictly increasing")
         last = t
     if len(frames) > 1 and not 0 < frames[-1]['t'] - frames[0]['t'] <= 12:
-        raise ValueError("动作片段不能超过 12 秒。")
+        raise ValueError("A gesture clip cannot be longer than 12 seconds.")
     return frames
 
 
@@ -108,12 +108,12 @@ class TemplateBank:
         if label not in ('cup', 'negative') or split not in ('template', 'test'):
             raise ValueError('Invalid label/split')
         if len(self.items) >= 200:
-            raise ValueError('模板库已达到 200 条，请整理后再添加。')
+            raise ValueError('The library already has 200 samples. Remove some before adding more.')
         if split == 'template':
             frames = trim_active(frames)
             validate_frames(frames)
         if split == 'template' and label == 'cup' and (coverage(frames) < .65 or motion(frames) < .015):
-            raise ValueError('CUP 模板需要清楚的双手、肩膀与动作变化，请调整构图后重录。')
+            raise ValueError('A target-gesture template needs clear hands, shoulders, and visible motion. Adjust the framing and record it again.')
         name = str(name).strip()[:100] or label
         item = dict(version=VERSION, id=uuid4().hex, label=label, split=split, name=name,
                     source=source or {'kind': 'local_camera', 'asl_reviewed': False}, frames=frames)

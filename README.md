@@ -10,7 +10,7 @@ SignAid aims to assist American Sign Language (ASL) users through a limited-voca
 
 ## 摄像头手语识别
 
-默认使用 MediaPipe 双手＋肩膀关键点与 DTW CUP 模板匹配。加载 `configs/local.robot.json` 或通过 `--robot-config` 指定配置后，识别到 CUP 会向 SO-101 派发取杯请求。CUP 使用代码中固定的 ACT 检查点，单次执行时限为 60 秒。加上 `--no-robot` 可只运行识别。旧 I3D 后端保留用于对照实验。
+默认使用 MediaPipe 双手＋肩膀关键点与 DTW CUP 模板匹配。加载 `configs/local.robot.json` 或通过 `--robot-config` 指定配置后，识别到 CUP 后，浏览器先释放摄像头，再向 SO-101 派发取杯请求。CUP 使用固定的 ACT 检查点 `009000`，单次执行时限为 60 秒。加上 `--no-robot` 可只运行识别。旧 I3D 后端保留用于对照实验。
 
 ```bash
 uv sync --locked --extra landmarks
@@ -18,7 +18,7 @@ uv run --extra landmarks signaid templates setup
 uv run --extra landmarks signaid camera
 ```
 
-打开 `http://localhost:8765`，点击“开启摄像头”。页面显示双手骨架和肩膀位置，连续匹配完整动作。一次 CUP 通过两次连续匹配后只产生一个事件；双手移出画面至少 0.8 秒、距上次触发至少 1.5 秒后重新允许识别。停止、切换到后台或关闭页面都会释放摄像头。
+打开 `http://localhost:8765`，点击 **Start camera**。页面显示双手骨架和肩膀位置，连续匹配完整动作。一次 CUP 通过两次连续匹配后只产生一个事件。只运行识别时，双手移出画面至少 0.8 秒、距上次触发至少 1.5 秒后可再次识别。连接机械臂时，触发取杯后摄像头停止，下次识别需要重新点击 **Start camera**。点击 **Stop**、切换到后台或关闭页面也会释放摄像头。
 
 首次使用先准备模板。可导入可用的 WLASL CUP 视频和其他词汇负样本：
 
@@ -29,7 +29,7 @@ uv run --extra landmarks signaid templates import-wlasl --gloss book --label neg
 
 `--download` 只获取标注中可直接下载的完整单词 MP4；旧链接可能失效。YouTube 合集和 SWF 需按 [WLASL 指南](docs/wlasl.md) 另行准备。原 train 划分加入模板，val/test 留作测试，不参与匹配。模型与关键点模板分别保存在 Git 忽略的 `models/mediapipe/` 和 `data/cup-templates/`。
 
-也可在页面选择 CUP 或干扰动作，点击“倒计时并录制 3 秒”。只保存关键点，不保存摄像头视频。务必补充现场挥手、挠头、拿杯等负样本，并在其他录制场次选择“独立测试样本”。没有正负模板、双手或肩膀检测不足、静止动作、模糊匹配时均不触发。
+也可在页面选择 **Target gesture** 或 **Other gesture**，点击 **Count down and record 3 seconds**。录制只保存关键点。务必补充现场挥手、挠头、拿杯等负样本，并在其他录制场次选择 **Hold out as a test sample**。没有正负模板、双手或肩膀检测不足、静止动作、模糊匹配时均不触发。
 
 ```bash
 uv run --extra landmarks signaid templates stats
