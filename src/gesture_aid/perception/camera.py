@@ -19,6 +19,8 @@ def add_command(commands) -> None:
     parser.add_argument("--templates-dir", type=Path, default=Path("data/cup-templates"))
     parser.add_argument("--distance-threshold", type=float, default=0.4)
     parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument("--robot-config", type=Path, help="Arm profile that receives request_cup")
+    parser.add_argument("--no-robot", action="store_true", help="Recognize signs without sending a robot request")
 
 
 def run(args) -> None:

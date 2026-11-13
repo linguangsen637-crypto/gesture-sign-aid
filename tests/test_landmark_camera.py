@@ -71,3 +71,30 @@ class CameraTests(unittest.TestCase):
                 if r['event_id']:events.append(r['event_id'])
                 if i==8:self.assertTrue(r['latched'])
         self.assertEqual(len(events),1)
+
+    def test_cup_event_sends_one_request_when_arm_is_attached(self):
+        class VisibleHands:
+            def extract(self, image, timestamp):
+                return dict(t=timestamp,shape=[[0.]*63]*2,wrists=[[0.,0.]]*2,valid=[True,True],body=True),dict(hands=[],shoulders=[])
+        class Sender:
+            def __init__(self):
+                self.intents=[]
+            def submit(self, intent):
+                self.intents.append(intent)
+                return True
+            def snapshot(self):
+                return dict(robot_connected=True, robot_busy=False, request_id='req', request_error=None)
+        self.app.extractor=VisibleHands()
+        self.app.sender=Sender()
+        sent=None
+        with patch.object(self.app.bank, 'match', return_value={'gloss':'cup','reason':'matched','cup_distance':.1}):
+            for i in range(16):
+                now=100+i*.125
+                with patch('gesture_aid.perception.landmark_camera.time.monotonic',return_value=now):
+                    result=self.app.frame(dict(self.data,timestamp=now))
+                if result['event_id']:
+                    sent=result
+        self.assertEqual(self.app.sender.intents, ['request_cup'])
+        self.assertIsNotNone(sent)
+        self.assertTrue(sent['robot_connected'])
+        self.assertEqual(sent['intent'], 'request_cup')

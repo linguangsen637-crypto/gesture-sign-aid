@@ -6,11 +6,11 @@ SignAid aims to assist American Sign Language (ASL) users through a limited-voca
 
 ## 当前可运行内容
 
-已接入固定版本 WLASL 官方仓库，提供词汇查询、子集导出、上游视频脚本工作目录准备、本地视频索引和词汇到取物请求的映射。基础框架提供自动执行与结果验收状态、模拟机械臂、测试和协作文档。摄像头页面支持本机 MediaPipe 关键点与 CUP 模板匹配，显示骨架、匹配距离和单次识别事件。实际 ASL 动作识别效果待现场评估，真实 SO-101 与 ACT 执行仍待接入。
+已接入固定版本 WLASL 官方仓库，提供词汇查询、子集导出、上游视频脚本工作目录准备、本地视频索引和词汇到取物请求的映射。基础框架提供自动执行与结果验收状态、模拟机械臂、测试和协作文档。摄像头页面支持本机 MediaPipe 关键点与 CUP 模板匹配，显示骨架、匹配距离和单次识别事件。SO-101 通过 MakerMods Lab 执行 ACT 取杯策略，实际识别与取杯效果待现场评估。
 
 ## 摄像头手语识别
 
-默认使用 MediaPipe 双手＋肩膀关键点与 DTW CUP 模板匹配。摄像头只产生本地识别事件，不连接机械臂。旧 I3D 后端保留用于对照实验。
+默认使用 MediaPipe 双手＋肩膀关键点与 DTW CUP 模板匹配。加载 `configs/local.robot.json` 或通过 `--robot-config` 指定配置后，识别到 CUP 会向 SO-101 派发取杯请求。CUP 使用代码中固定的 ACT 检查点，单次执行时限为 60 秒。加上 `--no-robot` 可只运行识别。旧 I3D 后端保留用于对照实验。
 
 ```bash
 uv sync --locked --extra landmarks
