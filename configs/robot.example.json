@@ -1,0 +1,21 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "robot_name": "SET_ROBOT_NAME",
+  "arm_type": "so101",
+  "mode": "single",
+  "follower_port": "SET_FOLLOWER_PORT",
+  "follower_config": "SET_FOLLOWER_CALIBRATION",
+  "leader_port": "SET_LEADER_PORT",
+  "leader_config": "SET_LEADER_CALIBRATION",
+  "camera_bindings": {"top": "top"},
+  "camera_dims": {"top": {"width": 640, "height": 480}},
+  "checkpoint_state_dim": 6,
+  "skills": {
+    "request_cup": {
+      "skill": "pick_cup",
+      "policy_path": "SET_LOCAL_MODEL_PATH",
+      "task": "pick up the cup and place it in the tray",
+      "duration_s": 30
+    }
+  }
+}
