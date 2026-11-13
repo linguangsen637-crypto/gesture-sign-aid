@@ -1,5 +1,6 @@
 """The camera can hand one intent to the arm without waiting for the rollout."""
 
+import time
 import unittest
 
 from gesture_aid.contracts import Intent
@@ -18,6 +19,17 @@ class Robot:
 
 
 class DispatchTests(unittest.TestCase):
+    def test_the_real_background_thread_runs_the_intent(self):
+        robot = Robot()
+        sender = ArmRequestSender(robot)
+        self.assertTrue(sender.submit("request_cup"))
+        for _ in range(50):
+            if robot.calls and not sender.snapshot()["robot_busy"]:
+                break
+            time.sleep(0.01)
+        self.assertEqual(robot.calls, [Intent.CUP])
+        self.assertFalse(sender.snapshot()["robot_busy"])
+
     def test_submit_runs_the_intent_once(self):
         robot = Robot()
         sender = ArmRequestSender(robot, spawn=lambda target, args: target(*args))

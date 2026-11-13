@@ -26,7 +26,7 @@ class ScriptedClient:
         return {"success": True, "message": "ok"}
 
 
-def profile(root: Path, policy: Path | None = None):
+def profile(root: Path, policy: Path | str | None = None):
     policy_path = policy or (root / "pretrained_model")
     config = {
         "base_url": "http://lab",
@@ -131,6 +131,31 @@ class LabRobotTests(unittest.TestCase):
                 robot.execute(Intent.CUP)
         self.assertEqual(client.posted[-1][0], "/api/v1/stop-inference")
         self.assertEqual(robot.executed_skills, [])
+
+    def test_request_cup_matches_the_makermods_run_on_robot(self) -> None:
+        with TemporaryDirectory() as directory:
+            loaded = profile(Path(directory))
+            pinned = loaded.pin_final_cup()
+        skill = pinned.skill_for(Intent.CUP)
+        self.assertEqual(skill.policy_path, "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/010000")
+        self.assertEqual(skill.duration_s, 60)
+        self.assertEqual(skill.task, "")
+
+    def test_execute_sends_the_cupfinal_hub_checkpoint(self) -> None:
+        clock = Clock()
+        ref = "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/010000"
+        with TemporaryDirectory() as directory:
+            loaded = profile(Path(directory), ref)
+            client = ScriptedClient({
+                "/api/v1/inference-status": [
+                    {"inference_active": False, "shutting_down": False},
+                    {"inference_active": True, "policy_ref": ref, "phase": "running"},
+                    {"inference_active": False, "shutting_down": False, "policy_ref": ref, "exited": True, "outcome": "ok", "phase": "stopped"},
+                ],
+            })
+            robot = MakerModsRobot(loaded, client, clock=clock, sleep=clock.sleep)
+            robot.execute(Intent.CUP)
+        self.assertEqual(client.posted[0][1]["policy_ref"], ref)
 
     def test_execute_refuses_a_busy_arm_and_a_missing_checkpoint(self) -> None:
         with TemporaryDirectory() as directory:

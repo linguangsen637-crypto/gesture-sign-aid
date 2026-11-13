@@ -6,6 +6,10 @@ from uuid import uuid4
 from gesture_aid.contracts import Intent
 
 
+def _start_daemon(target, args) -> None:
+    Thread(target=target, args=args, daemon=True).start()
+
+
 class ArmRequestSender:
     """Send `request_cup` to MakerMods while the recognizer keeps streaming.
 
@@ -15,7 +19,7 @@ class ArmRequestSender:
 
     def __init__(self, robot, spawn=None) -> None:
         self.robot = robot
-        self._spawn = spawn or (lambda target, args: Thread(target=target, args=args, daemon=True))
+        self._spawn = spawn or _start_daemon
         self._lock = Lock()
         self.busy = False
         self.last_error: str | None = None
@@ -46,6 +50,7 @@ class ArmRequestSender:
         try:
             self.robot.execute(Intent(intent))
         except Exception as error:
+            print(f"{intent} failed: {error}", flush=True)
             with self._lock:
                 if self.last_request_id == request_id:
                     self.last_error = str(error)

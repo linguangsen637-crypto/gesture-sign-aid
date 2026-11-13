@@ -5,11 +5,12 @@ whether the item reached the tray.
 """
 
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from gesture_aid.contracts import Intent
@@ -17,6 +18,16 @@ from gesture_aid.contracts import Intent
 
 class LabError(RuntimeError):
     """MakerMods Lab could not be reached or rejected the request."""
+
+
+_HUB_POLICY_REF = re.compile(r"^[^@]+@(?:checkpoints/\d+|root)$")
+# Same launch as MakerMods Policy studio → cupfinal → step 10000 → Run on robot.
+FINAL_CUP_POLICY = "axellin/act_cupfinal_2026-11-13_14-34-08@checkpoints/010000"
+FINAL_CUP_DURATION_S = 60
+
+
+def _policy_available(policy_path: str) -> bool:
+    return bool(_HUB_POLICY_REF.match(policy_path)) or Path(policy_path).is_dir()
 
 
 @dataclass(frozen=True)
@@ -42,6 +53,20 @@ class RobotProfile:
     camera_dims: dict[str, dict[str, int]]
     checkpoint_state_dim: int
     skills: dict[Intent, SkillSpec]
+
+    def pin_final_cup(self) -> "RobotProfile":
+        skill = self.skills.get(Intent.CUP)
+        if skill is None:
+            return self
+        skills = dict(self.skills)
+        skills[Intent.CUP] = SkillSpec(
+            intent=skill.intent,
+            name=skill.name,
+            policy_path=FINAL_CUP_POLICY,
+            task="",
+            duration_s=FINAL_CUP_DURATION_S,
+        )
+        return replace(self, skills=skills)
 
     def skill_for(self, intent: Intent) -> SkillSpec:
         try:
@@ -147,7 +172,7 @@ class MakerModsRobot:
 
     def execute(self, intent: Intent) -> None:
         skill = self.profile.skill_for(intent)
-        if not Path(skill.policy_path).is_dir():
+        if not _policy_available(skill.policy_path):
             raise RuntimeError(f"ACT checkpoint is not available: {skill.policy_path}")
         current = self.client.get("/api/v1/inference-status")
         if current.get("inference_active") or current.get("shutting_down"):
@@ -224,7 +249,7 @@ def load_profile(path: Path) -> RobotProfile:
 
 
 def _policy_status(client: LabClient, skill: SkillSpec | None, bindings: dict[str, str]) -> dict:
-    if skill is None or not Path(skill.policy_path).is_dir():
+    if skill is None or not _policy_available(skill.policy_path):
         return {"ready": False, "error": "ACT checkpoint is not available."}
     try:
         summary = client.get("/api/v1/policy-config", {"policy_ref": skill.policy_path})

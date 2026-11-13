@@ -172,7 +172,7 @@ def _request_sender(args, project):
         return None
     from gesture_aid.robot.dispatch import ArmRequestSender
     from gesture_aid.robot.lab import MakerModsRobot, load_profile
-    profile = load_profile(config if config.is_absolute() else project / config)
+    profile = load_profile(config if config.is_absolute() else project / config).pin_final_cup()
     return ArmRequestSender(MakerModsRobot(profile))
 
 
@@ -188,7 +188,11 @@ def run(args):
     sender = _request_sender(args, project)
     try:
         server = ThreadingHTTPServer(('127.0.0.1', args.port), handler_for(CameraApp(extractor, bank, sender)))
-        target = 'local recognition only' if sender is None else f'request_cup -> {sender.robot.profile.robot_name}'
+        if sender is None:
+            target = 'local recognition only'
+        else:
+            skill = next(iter(sender.robot.profile.skills.values()))
+            target = f'request_cup -> {skill.policy_path}'
         print(f'MediaPipe CUP recognition ready at http://localhost:{args.port} ({target})', flush=True)
         try:
             server.serve_forever()

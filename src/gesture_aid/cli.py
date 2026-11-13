@@ -52,7 +52,7 @@ def main() -> None:
         return
     if args.command == "robot":
         try:
-            robot = MakerModsRobot(load_profile(args.config))
+            robot = MakerModsRobot(load_profile(args.config).pin_final_cup())
             if args.robot_command == "status":
                 result = robot.status()
             elif args.robot_command == "stop":
