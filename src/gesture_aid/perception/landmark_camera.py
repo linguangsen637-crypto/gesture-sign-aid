@@ -1,4 +1,4 @@
-"""Local-only MediaPipe streaming API. Never imports or invokes a robot executor."""
+"""MediaPipe streaming API. A request sender, when attached, forwards a CUP event."""
 import base64
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -15,15 +15,21 @@ from .landmarks import LandmarkExtractor
 from .templates import TemplateBank, TriggerGate
 
 
+def _robot_fields(sender):
+    if sender is None:
+        return dict(robot_connected=False, robot_busy=False, request_id=None, request_error=None)
+    return sender.snapshot()
+
+
 class CameraApp:
-    def __init__(self, extractor, bank):
-        self.extractor, self.bank = extractor, bank
+    def __init__(self, extractor, bank, sender=None):
+        self.extractor, self.bank, self.sender = extractor, bank, sender
         self.lock = Lock()
         self.sessions = {}
 
     def health(self):
         return dict(status='ok', model='MediaPipe Hands + Pose / DTW', templates=self.bank.summary(),
-                    threshold=self.bank.threshold, calibrated=False, robot_connected=False)
+                    threshold=self.bank.threshold, calibrated=False, **_robot_fields(self.sender))
 
     def frame(self, data):
         session_id = str(UUID(data['session_id']))
@@ -74,9 +80,11 @@ class CameraApp:
                 # Prefer a qualifying full-sequence match, otherwise show nearest diagnostic.
                 s['result'] = min(results, key=lambda r: (r['gloss'] != 'cup', r.get('cup_distance') if r.get('cup_distance') is not None else 999))
                 event = s['gate'].match(s['result']['gloss'] == 'cup', now)
+        if event and self.sender is not None:
+            self.sender.submit('request_cup')
         return dict(feature=feature, overlay=overlay, match=s['result'], latched=s['gate'].latched,
-                    event_id=event, intent='request_cup' if event else 'unclear', robot_connected=False,
-                    templates=self.bank.summary())
+                    event_id=event, intent='request_cup' if event else 'unclear',
+                    **_robot_fields(self.sender), templates=self.bank.summary())
 
 
 def handler_for(app):
@@ -139,7 +147,7 @@ def handler_for(app):
                     result = app.frame(data)
                 else:
                     item = app.bank.save(data['frames'], data['label'], data['split'], data.get('name',''))
-                    result = dict(saved=item, templates=app.bank.summary(), robot_connected=False)
+                    result = dict(saved=item, templates=app.bank.summary(), **_robot_fields(app.sender))
                     for s in app.sessions.values():
                         s['frames'].clear()
                         s['gate'].hits = 0
@@ -153,6 +161,21 @@ def handler_for(app):
     return Handler
 
 
+def _request_sender(args, project):
+    if getattr(args, 'no_robot', False):
+        return None
+    config = getattr(args, 'robot_config', None)
+    if config is None:
+        candidate = project / 'configs/local.robot.json'
+        config = candidate if candidate.is_file() else None
+    if config is None:
+        return None
+    from gesture_aid.robot.dispatch import ArmRequestSender
+    from gesture_aid.robot.lab import MakerModsRobot, load_profile
+    profile = load_profile(config if config.is_absolute() else project / config)
+    return ArmRequestSender(MakerModsRobot(profile))
+
+
 def run(args):
     if not 1 <= args.port <= 65535:
         raise ValueError('Invalid port')
@@ -162,9 +185,11 @@ def run(args):
     model_dir = resolve(args.model_dir or Path('models/mediapipe'))
     bank = TemplateBank(resolve(args.templates_dir), args.distance_threshold)
     extractor = LandmarkExtractor(model_dir)
+    sender = _request_sender(args, project)
     try:
-        server = ThreadingHTTPServer(('127.0.0.1', args.port), handler_for(CameraApp(extractor, bank)))
-        print(f'MediaPipe CUP recognition ready at http://localhost:{args.port}', flush=True)
+        server = ThreadingHTTPServer(('127.0.0.1', args.port), handler_for(CameraApp(extractor, bank, sender)))
+        target = 'local recognition only' if sender is None else f'request_cup -> {sender.robot.profile.robot_name}'
+        print(f'MediaPipe CUP recognition ready at http://localhost:{args.port} ({target})', flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
