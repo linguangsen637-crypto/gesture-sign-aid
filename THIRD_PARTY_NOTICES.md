@@ -23,6 +23,23 @@
 
 SignAid 的数据适配代码位于 `src/gesture_aid/datasets`。上游下载器、预处理器和识别模型代码保存在子模块中。
 
+## pick_cup ACT 策略
+
+- 模型：https://huggingface.co/axellin/act_cupfinal_2026-11-13_14-34-08
+- 固定提交：`3240600b11fa941067649a06e00d03d4d8402145`
+- 数据集：https://huggingface.co/datasets/axellin/cupfinal ，提交 `555ccf86f422f44ba5a14c89077b8cb9513f92fa`
+- 许可：Apache-2.0
+- 训练栈为 LeRobot 0.6.2 的 ACT。仓库只记录版本和接口，不提交 `model.safetensors`。
+
+```bibtex
+@misc{cadene2024lerobot,
+    author = {Cadene, Remi and Alibert, Simon and Soare, Alexander and Gallouedec, Quentin and Zouitine, Adil and Palma, Steven and Kooijmans, Pepijn and Aractingi, Michel and Shukor, Mustafa and Aubakirova, Dana and Russi, Martino and Capuano, Francesco and Pascal, Caroline and Choghari, Jade and Moss, Jess and Wolf, Thomas},
+    title = {LeRobot: State-of-the-art Machine Learning for Real-World Robotics in Pytorch},
+    howpublished = "\url{https://github.com/huggingface/lerobot}",
+    year = {2024}
+}
+```
+
 ## 摄像头识别权重
 
 摄像头模块加载固定版本子模块中的 I3D 代码。WLASL2000 权重及标签来自 [cedssama 的公开镜像](https://huggingface.co/spaces/cedssama/I3D_Sign_Language_Classification/tree/38f30b7a60a9e7336167b1c1eed5b3923a11da9d)，镜像版本为 `38f30b7a60a9e7336167b1c1eed5b3923a11da9d`。该镜像声明其演示使用 WLASL 预训练 I3D 模型。模型标签顺序已与项目中上游 `wlasl_class_list.txt` 核对一致。

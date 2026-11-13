@@ -1,5 +1,40 @@
 {
-  "request_cup": {"skill": "pick_cup", "policy_path": "SET_LOCAL_MODEL_PATH", "robot_id": "SET_ROBOT_ID"},
-  "request_water": {"skill": "pick_water", "policy_path": "SET_LOCAL_MODEL_PATH", "robot_id": "SET_ROBOT_ID"},
-  "request_tissue": {"skill": "pick_tissue", "policy_path": "SET_LOCAL_MODEL_PATH", "robot_id": "SET_ROBOT_ID"}
+  "request_cup": {
+    "skill": "pick_cup",
+    "policy_path": "axellin/act_cupfinal_2026-11-13_14-34-08",
+    "repo_id": "axellin/act_cupfinal_2026-11-13_14-34-08",
+    "revision": "3240600b11fa941067649a06e00d03d4d8402145",
+    "dataset_repo_id": "axellin/cupfinal",
+    "dataset_revision": "555ccf86f422f44ba5a14c89077b8cb9513f92fa",
+    "robot_type": "so_follower",
+    "task": "uo",
+    "camera": "top",
+    "fps": 30,
+    "image_shape": [3, 480, 640],
+    "state_shape": [6],
+    "action_shape": [6],
+    "action_names": [
+      "shoulder_pan.pos",
+      "shoulder_lift.pos",
+      "elbow_flex.pos",
+      "wrist_flex.pos",
+      "wrist_roll.pos",
+      "gripper.pos"
+    ],
+    "chunk_size": 100,
+    "n_action_steps": 100,
+    "n_obs_steps": 1,
+    "lerobot_version": "0.6.2",
+    "checkpoint_device": "cuda"
+  },
+  "request_water": {
+    "skill": "pick_water",
+    "policy_path": "SET_LOCAL_MODEL_PATH",
+    "robot_type": "so_follower"
+  },
+  "request_tissue": {
+    "skill": "pick_tissue",
+    "policy_path": "SET_LOCAL_MODEL_PATH",
+    "robot_type": "so_follower"
+  }
 }

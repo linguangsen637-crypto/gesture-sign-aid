@@ -6,7 +6,7 @@ SignAid aims to assist American Sign Language (ASL) users through a limited-voca
 
 ## 当前可运行内容
 
-已接入固定版本 WLASL 官方仓库，提供词汇查询、子集导出、上游视频脚本工作目录准备、本地视频索引和词汇到取物请求的映射。基础框架提供自动执行与结果验收状态、模拟机械臂、测试和协作文档。摄像头页面支持本机 MediaPipe 关键点与 CUP 模板匹配，显示骨架、匹配距离和单次识别事件。实际 ASL 动作识别效果待现场评估，真实 SO-101 与 ACT 执行仍待接入。
+已接入固定版本 WLASL 官方仓库，提供词汇查询、子集导出、上游视频脚本工作目录准备、本地视频索引和词汇到取物请求的映射。基础框架提供自动执行与结果验收状态、模拟机械臂、测试和协作文档。摄像头页面支持本机 MediaPipe 关键点与 CUP 模板匹配，显示骨架、匹配距离和单次识别事件。实际 ASL 动作识别效果待现场评估。`pick_cup` 已索引 LeRobot ACT 策略 [`axellin/act_cupfinal_2026-11-13_14-34-08`](https://huggingface.co/axellin/act_cupfinal_2026-11-13_14-34-08)。`signaid robot` 只核对该策略并打印有限时长的 rollout 命令；电机仍由已验证的 LeRobot 环境在现场检查后启动。
 
 ## 摄像头手语识别
 
@@ -70,6 +70,10 @@ uv run signaid demo --gloss cup
 # 模拟完整交付
 uv run signaid demo --intent request_cup --delivered
 
+# 查看已索引的 pick_cup 策略，并打印有限时长的 rollout 命令
+uv run signaid robot show
+uv run signaid robot command --port /dev/tty.usbmodem --camera-index 0
+
 # 不明确的识别结果保持等待
 uv run signaid demo --intent unclear
 
@@ -77,7 +81,7 @@ uv run signaid demo --intent unclear
 uv run python -m unittest discover -s tests -v
 ```
 
-每次 demo 命令启动一个独立的内存会话。输出中的 `mode` 为 `simulation`，完整交付示例中的结果也为模拟结果。`--gloss` 接受人工指定的标签；真实摄像头识别使用独立的 `camera` 命令。
+每次 demo 命令启动一个独立的内存会话。输出中的 `mode` 为 `simulation`，完整交付示例中的结果也为模拟结果。`--gloss` 接受人工指定的标签；真实摄像头识别使用独立的 `camera` 命令。`robot show` 和 `robot command` 只读取技能索引并打印参数，端口和相机索引需要换成现场设备。
 
 WLASL 固定版本包含 2,000 个 ASL 词汇、21,083 条视频标注。其中 `cup` 有 13 条，`water` 有 18 条，`tissue` 有 8 条，实际视频可用性需下载后检查。视频准备、可选依赖、FFmpeg 和上游识别方法见 [WLASL 接入指南](docs/wlasl.md)。
 
@@ -89,7 +93,7 @@ WLASL 固定版本包含 2,000 个 ASL 词汇、21,083 条视频标注。其中 
 | `src/gesture_aid/datasets/` | WLASL 标注、子集和视频索引 |
 | `third_party/WLASL/` | 固定提交的上游仓库子模块 |
 | `src/gesture_aid/workflow/` | 自动执行、任务状态与请求去重 |
-| `src/gesture_aid/robot/` | SO-101、ACT 模型加载、抓放与停止机制 |
+| `src/gesture_aid/robot/` | SO-101 技能索引、ACT 策略校验和 rollout 命令；电机生命周期留在 LeRobot 环境 |
 | `src/gesture_aid/dashboard/` | 用户交互和操作员界面 |
 | `configs/` | 手语词目来源和动作策略配置示例 |
 | `docs/` | 架构、数据与模型、评估、任务清单和演示 |
@@ -99,7 +103,7 @@ WLASL 固定版本包含 2,000 个 ASL 词汇、21,083 条视频标注。其中 
 ## 第一版范围
 
 - 第一版采用 WLASL 的 `cup`，自动抓取打印杯并送至固定取物盘。现有 `water`、`tissue` 映射供后续扩展。
-- 先训练 `pick_cup` ACT 策略。
+- `pick_cup` 使用已发布的 ACT 策略 `axellin/act_cupfinal_2026-11-13_14-34-08`。Mac 推理速度和实机交付仍待记录。
 - 识别器提交有效请求后立即执行，机械臂将杯子放入固定取物盘并退回。
 - 运行结束后由独立结果检测报告交付状态，再由调用方重置流程；结果检测仍待接入。
 - 对其他表达和不完整动作输出 `unclear`。
