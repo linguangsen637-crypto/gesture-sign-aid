@@ -20,4 +20,7 @@ configs/local.*
 *.pth
 *.mp4
 *.mov
+!presentation/**/*.mp4
+!presentation/**/*.mov
+!presentation/**/*.MOV
 *.parquet
