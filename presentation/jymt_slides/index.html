@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SignAid From Sign Language to Robotic Pickup</title>
+<style>
+  :root {
+    --bg: #000;
+    --fg: #fff;
+    --muted: rgba(255, 255, 255, 0.72);
+    --accent: #ff5a1f;
+    --green: #2f9d45;
+    --pink: #e43788;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    color: var(--fg);
+    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+  }
+
+  .viewport {
+    position: fixed;
+    inset: 0;
+    background: #000;
+  }
+
+  .deck {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: center center;
+    background: #000;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    background: #000;
+    color: #fff;
+    overflow: hidden;
+  }
+  .slide.on { display: block; }
+  .slide.title.on { display: grid; }
+  .slide.light { background: #fff; color: #111; }
+  body.light-slide .hud { color: rgba(0, 0, 0, 0.45); }
+
+  .section {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 140px;
+  }
+  .section h1 {
+    margin: 0;
+    font-size: 92px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
+
+  .kicker {
+    margin: 28px 0 0;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .accent { color: var(--accent); }
+
+  .title {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+    height: 100%;
+    padding: 0 140px 0 150px;
+  }
+  .title h1 {
+    margin: 0;
+    font-size: 84px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+  }
+  .title h1 .brand {
+    display: block;
+    font-size: 118px;
+    letter-spacing: -0.05em;
+    line-height: 1.02;
+    margin-bottom: 18px;
+  }
+  .title .team {
+    margin: 72px 0 0;
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .mark { justify-self: center; }
+
+  .team {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 150px;
+    gap: 72px;
+  }
+  .team-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    justify-items: center;
+  }
+  .team-row.offset {
+    grid-template-columns: repeat(2, 1fr);
+    width: 62%;
+    margin: 0 auto;
+  }
+  .team-row.offset article:last-child { margin-top: 28px; }
+  .member {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+  }
+  .face {
+    width: 140px;
+    height: 140px;
+    margin-bottom: 12px;
+    object-fit: contain;
+    display: block;
+    transform-origin: 50% 70%;
+    will-change: transform;
+  }
+  .slide.on .team-row:first-child .member:nth-child(1) .face {
+    animation: face-float 2.8s ease-in-out infinite;
+  }
+  .slide.on .team-row:first-child .member:nth-child(2) .face {
+    animation: face-wobble 2.4s ease-in-out infinite;
+    animation-delay: 0.2s;
+  }
+  .slide.on .team-row:first-child .member:nth-child(3) .face {
+    animation: face-bounce 2.2s ease-in-out infinite;
+    animation-delay: 0.4s;
+  }
+  .slide.on .team-row.offset .member:nth-child(1) .face {
+    animation: face-breathe 3s ease-in-out infinite;
+    animation-delay: 0.15s;
+  }
+  .slide.on .team-row.offset .member:nth-child(2) .face {
+    animation: face-tilt 2.6s ease-in-out infinite;
+    animation-delay: 0.35s;
+  }
+  @keyframes face-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-22px); }
+  }
+  @keyframes face-wobble {
+    0%, 100% { transform: rotate(-16deg); }
+    50% { transform: rotate(16deg); }
+  }
+  @keyframes face-bounce {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    35% { transform: translateY(-26px) scale(0.9, 1.12); }
+    55% { transform: translateY(2px) scale(1.14, 0.84); }
+    70% { transform: translateY(-10px) scale(0.96, 1.06); }
+  }
+  @keyframes face-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+  @keyframes face-tilt {
+    0%, 100% { transform: rotate(14deg) translateY(0); }
+    50% { transform: rotate(-14deg) translateY(-18px); }
+  }
+  .member strong {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .member span {
+    font-size: 22px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .agenda {
+    display: grid;
+    grid-template-columns: 1fr 0.9fr;
+    align-items: center;
+    height: 100%;
+    padding: 0 160px 0 140px;
+    gap: 40px;
+  }
+  .agenda-title {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-size: 78px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+  .agenda-title + .agenda-title { margin-top: 8px; }
+  .blob {
+    width: 118px;
+    height: 96px;
+    object-fit: contain;
+    display: block;
+  }
+  .blob.hero {
+    width: 150px;
+    height: 122px;
+    margin: 0 auto 18px;
+  }
+  .toc { margin: 0; padding: 0; list-style: none; }
+  .toc li { margin: 0 0 34px; }
+  .toc li:last-child { margin-bottom: 0; }
+  .toc strong {
+    display: block;
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .toc span {
+    display: block;
+    margin-top: 6px;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .split {
+    display: grid;
+    align-items: center;
+    height: 100%;
+    padding: 70px 110px;
+    gap: 56px;
+  }
+  .split.asl { grid-template-columns: 0.92fr 1.08fr; }
+  .split.ai { grid-template-columns: 0.86fr 1.14fr; }
+  .split.rhino { grid-template-columns: 0.78fr 1.22fr; }
+  .split h2 {
+    margin: 0;
+    font-size: 54px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+  }
+  .lead {
+    margin: 56px 0 0;
+    font-size: 46px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+  }
+  .note {
+    margin: 72px 0 0;
+    font-size: 28px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.86);
+  }
+  .chart {
+    width: 100%;
+    height: 900px;
+    object-fit: contain;
+    object-position: center;
+    background: transparent;
+  }
+  .steps {
+    margin: 48px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.45;
+  }
+  .figure { margin: 0; }
+  .figure img.illu {
+    width: 100%;
+    height: 620px;
+    object-fit: cover;
+    display: block;
+  }
+  .figure figcaption {
+    margin-top: 18px;
+    text-align: right;
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  .prep, .demo {
+    height: 100%;
+    padding: 96px 110px 70px;
+  }
+  .demo.media {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .demo.media .cards { width: 100%; }
+  .prep h2, .demo h2 {
+    margin: 0 0 42px;
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 34px;
+  }
+  .cards.two { grid-template-columns: 1fr 1fr; gap: 48px; }
+  .cards figure { margin: 0; }
+  .cards img {
+    width: 100%;
+    height: 520px;
+    object-fit: cover;
+    display: block;
+    background: #161616;
+  }
+  .cards.two img,
+  .cards.two video { height: 560px; }
+  .cards video {
+    width: 100%;
+    object-fit: contain;
+    display: block;
+    background: #111;
+  }
+  .slide.light .cards video { background: #f4f4f4; }
+  .cards figcaption {
+    margin-top: 22px;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .cards figcaption small {
+    display: block;
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .slide.light .cards figcaption,
+  .slide.light .cards figcaption small {
+    color: #111;
+  }
+  .slide.light .cards figcaption .accent {
+    color: var(--accent);
+  }
+
+  .laptop {
+    background: #2a2a2c;
+    border-radius: 22px;
+    padding: 16px 16px 42px;
+    position: relative;
+  }
+  .laptop:after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 12px;
+    height: 10px;
+    border-radius: 0 0 10px 10px;
+    background: #3a3a3c;
+  }
+  .laptop img,
+  .laptop video {
+    width: 100%;
+    height: 640px;
+    object-fit: cover;
+    object-position: center 42%;
+    display: block;
+    border-radius: 8px;
+    background: #111;
+  }
+
+  .closer {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .closer h1 {
+    margin: 0;
+    font-size: 78px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.12;
+  }
+
+  .result {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 72px 160px 56px;
+    gap: 32px;
+  }
+  .result video {
+    width: 1480px;
+    height: 780px;
+    object-fit: contain;
+    background: #000;
+    display: block;
+  }
+  .result p {
+    margin: 0;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .hud {
+    position: fixed;
+    right: 22px;
+    bottom: 16px;
+    z-index: 5;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="deck" id="deck">
+
+    <section class="slide title on">
+      <div>
+        <h1><span class="brand">SignAid</span>From Sign Language<br>to Robotic Pickup</h1>
+        <p class="team">TEAM: 金玉满堂</p>
+      </div>
+      <svg class="mark" viewBox="0 0 240 200" width="300" height="250" aria-hidden="true">
+        <polygon points="58,6 182,6 120,108" fill="#ff5a1f"/>
+        <polygon points="10,198 116,198 63,112" fill="#2f9d45"/>
+        <polygon points="124,198 230,198 177,112" fill="#e43788"/>
+      </svg>
+    </section>
+
+    <section class="slide">
+      <div class="team">
+        <div class="team-row">
+          <article class="member">
+            <img class="face" src="assets/vince.png" alt="">
+            <strong>Vince</strong>
+            <span>Freelance Designer</span>
+          </article>
+          <article class="member">
+            <img class="face" src="assets/axel.png" alt="">
+            <strong>Axel</strong>
+            <span>YEAR2, MPU</span>
+          </article>
+          <article class="member">
+            <img class="face" src="assets/drunk.png" alt="">
+            <strong>Drunk</strong>
+            <span>YEAR 4, MUST</span>
+          </article>
+        </div>
+        <div class="team-row offset">
+          <article class="member">
+            <img class="face" src="assets/sara.png" alt="">
+            <strong>Sara</strong>
+            <span>Master, UM</span>
+          </article>
+          <article class="member">
+            <img class="face" src="assets/joe.png" alt="">
+            <strong>Joe</strong>
+            <span>YEAR 2, MPU</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="agenda">
+        <div>
+          <div class="agenda-title">We will <img class="blob" src="assets/blob.png" alt=""></div>
+          <div class="agenda-title">Talk about...</div>
+        </div>
+        <ol class="toc">
+          <li><strong>BACKGROUND</strong><span>What We did</span></li>
+          <li><strong>WORK WITH Cursor AI</strong><span>How We did</span></li>
+          <li><strong>DEMO</strong><span>How We play</span></li>
+          <li><strong>CONCLUSION</strong><span>What We got</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="section"><h1>BACKGROUND</h1></div>
+    </section>
+
+    <section class="slide">
+      <div class="split asl">
+        <div>
+          <h2>Camara + Arm can do<br>Lots of things</h2>
+          <p class="lead"><span class="accent">Camera</span> recognizes ASL,<br>With <span class="accent">MediaPipe, DTW CUP</span><br><span class="accent">SO-101</span> picks specific item.</p>
+          <p class="note">For Accessible use Sign Language<br>Vision Model</p>
+        </div>
+        <img class="chart" src="assets/asl.jpg" alt="ASL alphabet chart">
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="prep">
+        <h2>Preparation</h2>
+        <div class="cards">
+          <figure>
+            <img src="assets/item.jpg" alt="A lidded coffee cup on the table">
+            <figcaption>Item</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/target.jpg" alt="A white cup with tracking markers">
+            <figcaption>Target place</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/arm.jpg" alt="Two SO-101 arms on the demo table">
+            <figcaption>SO-101 Arm</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="section"><h1>WORK WITH Cursor AI</h1></div>
+    </section>
+
+    <section class="slide">
+      <div class="split ai">
+        <div>
+          <h2>What AI helps us</h2>
+          <ol class="steps">
+            <li>1. GUI Building</li>
+            <li>2. Set up Environment</li>
+            <li>3. Project Mapping</li>
+            <li>4. Dataset Combination</li>
+          </ol>
+        </div>
+        <figure class="figure">
+          <img class="illu" src="assets/ai.png" alt="Illustration of a robot arm, a camera, signing hands, and a laptop">
+          <figcaption>*This image also created by Grok Bot</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="split rhino">
+        <div>
+          <h2>3D Printer<br>Rhino Buliding</h2>
+          <p class="kicker"><span class="accent">MCP</span> help to build 3D model</p>
+        </div>
+        <div class="laptop">
+          <video src="assets/rhino.mp4" data-rate="1.5" muted controls playsinline loop preload="metadata"></video>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <div class="section"><h1>Let’s PLAY</h1></div>
+    </section>
+
+    <section class="slide light">
+      <div class="demo media">
+        <div class="cards two">
+          <figure>
+            <video src="assets/gui.mp4" muted controls playsinline loop preload="metadata" autoplay></video>
+            <figcaption>Gesture GUI<small>Help to modify gesture results.</small></figcaption>
+          </figure>
+          <figure>
+            <video src="assets/processing.mp4" data-rate="1.5" muted controls playsinline loop preload="metadata"></video>
+            <figcaption>Processing<small>Just grab it, and <span class="accent">WOW</span>.</small></figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <div class="result">
+        <video src="assets/success.mp4" data-rate="1.25" muted controls playsinline loop preload="metadata"></video>
+        <p>Example of test results</p>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="section"><h1>Conclusion</h1></div>
+    </section>
+
+    <section class="slide">
+      <div class="closer">
+        <img class="blob hero" src="assets/blob.png" alt="">
+        <h1>A Simple Gesture<br>To Grab Items</h1>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="section"><h1>Future</h1></div>
+    </section>
+
+    <section class="slide">
+      <div class="section"><h1>Thank You</h1></div>
+    </section>
+
+  </div>
+</div>
+<div class="hud" id="hud">01 / 13</div>
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const deck = document.getElementById("deck");
+  const hud = document.getElementById("hud");
+  let index = 0;
+
+  function fit() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    deck.style.transform = "translate(-50%, -50%) scale(" + s + ")";
+  }
+
+  function show(n) {
+    index = (n + slides.length) % slides.length;
+    slides.forEach((slide, i) => slide.classList.toggle("on", i === index));
+    hud.textContent = String(index + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0");
+    document.body.classList.toggle("light-slide", slides[index].classList.contains("light"));
+    history.replaceState(null, "", "#" + (index + 1));
+    document.querySelectorAll("video").forEach((video) => video.pause());
+    slides[index].querySelectorAll("video").forEach((video) => {
+      video.playbackRate = Number(video.dataset.rate || 1);
+      video.currentTime = 0;
+      video.muted = true;
+      video.play().catch(() => {});
+    });
+  }
+
+  function next() { show(index + 1); }
+  function prev() { show(index - 1); }
+
+  window.addEventListener("resize", fit);
+  window.addEventListener("keydown", (event) => {
+    const key = event.key;
+    if (event.target.closest && event.target.closest("video")) return;
+    if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(key)) {
+      event.preventDefault();
+      next();
+    } else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(key)) {
+      event.preventDefault();
+      prev();
+    } else if (key === "Home") {
+      show(0);
+    } else if (key === "End") {
+      show(slides.length - 1);
+    } else if (key === "f" || key === "F") {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  window.addEventListener("click", (event) => {
+    if (event.target.closest && event.target.closest("video")) return;
+    if (event.clientX < window.innerWidth * 0.22) prev();
+    else next();
+  });
+
+  let touchX = null;
+  window.addEventListener("touchstart", (event) => {
+    touchX = event.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener("touchend", (event) => {
+    if (touchX == null) return;
+    const dx = event.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 40) dx < 0 ? next() : prev();
+    touchX = null;
+  }, { passive: true });
+
+  const start = Number((location.hash || "").slice(1));
+  fit();
+  show(Number.isFinite(start) && start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
