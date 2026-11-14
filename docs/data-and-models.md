@@ -12,6 +12,20 @@
 
 同步 LeRobot 数据集时保留完整 `data/`、`videos/`、`meta/`。部署模型保留权重、配置和归一化参数。恢复训练所需的 checkpoint 状态单独保存。
 
+## SO-101 取杯 ACT 训练记录
+
+本次训练使用 SO-101 的遥操作示教数据，训练 ACT 策略以执行 `pick_cup`。训练运行共 10,000 步，SignAid 部署使用第 9,000 步的检查点。
+
+| 字段 | 记录 |
+| --- | --- |
+| 示教数据 | [`axellin/cupfinal`](https://huggingface.co/datasets/axellin/cupfinal)，49 个回合、17,690 帧，采集帧率 30 FPS |
+| 训练框架与参数 | LeRobot 0.6.2，batch size 8，AdamW，学习率 `1e-5`，随机种子 `1000` |
+| 策略输入与输出 | `top` 相机 640 × 480，状态输入和动作输出各 6 维 |
+| 模型来源与许可 | [Hugging Face 模型卡](https://huggingface.co/axellin/act_cupfinal_2026-11-13_14-34-08)，标注为 Apache-2.0 |
+| 部署检查点 | [`checkpoints/009000`](https://huggingface.co/axellin/act_cupfinal_2026-11-13_14-34-08/tree/3240600b11fa941067649a06e00d03d4d8402145/checkpoints/009000)，文档链接固定到 Hugging Face 提交 `3240600` |
+
+模型权重由 Hugging Face 托管。实机抓放成功率、耗时和失败原因记录在 [评估文档](evaluation.md)，目前待填写。
+
 ## 每次训练记录
 
 复制下表，填写真实结果后提交文档更新。

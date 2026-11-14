@@ -12,6 +12,8 @@ SignAid aims to assist American Sign Language (ASL) users through a limited-voca
 
 默认使用 MediaPipe 双手＋肩膀关键点与 DTW CUP 模板匹配。加载 `configs/local.robot.json` 或通过 `--robot-config` 指定配置后，识别到 CUP 后，浏览器先释放摄像头，再向 SO-101 派发取杯请求。CUP 使用固定的 ACT 检查点 `009000`，单次执行时限为 60 秒。加上 `--no-robot` 可只运行识别。旧 I3D 后端保留用于对照实验。
 
+SO-101 的示教数据、训练配置和部署用的 `009000` 检查点见 [SO-101 取杯 ACT 训练记录](docs/data-and-models.md#so-101-取杯-act-训练记录)。
+
 ```bash
 uv sync --locked --extra landmarks
 uv run --extra landmarks signaid templates setup
